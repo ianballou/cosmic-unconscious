@@ -7,7 +7,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "🪿 cosmic-unconscious: deploying goose configuration..."
+echo "cosmic-unconscious: deploying goose configuration..."
 echo ""
 
 # --- Always deploy global ---
@@ -16,20 +16,20 @@ echo "=== Global ==="
 mkdir -p ~/.agents/skills ~/.config/goose ~/.local/share/goose/recipes
 
 cp "$SCRIPT_DIR/global/config.yaml" ~/.config/goose/config.yaml
-echo "  ✓ config.yaml"
+echo "  - config.yaml"
 
 cp "$SCRIPT_DIR/global/guardrails.md" ~/.config/goose/guardrails.md
-echo "  ✓ guardrails.md"
+echo "  - guardrails.md"
 
 cp "$SCRIPT_DIR/global/goosehints" ~/.config/goose/.goosehints
-echo "  ✓ global .goosehints"
+echo "  - global .goosehints"
 
 for skill_dir in "$SCRIPT_DIR"/global/skills/*/; do
     [ -d "$skill_dir" ] || continue
     skill_name=$(basename "$skill_dir")
     rm -rf ~/.agents/skills/"$skill_name"
     cp -r "$skill_dir" ~/.agents/skills/"$skill_name"
-    echo "  ✓ skill: $skill_name"
+    echo "  - skill: $skill_name"
 done
 
 for recipe_dir in "$SCRIPT_DIR"/recipes/*/; do
@@ -37,7 +37,7 @@ for recipe_dir in "$SCRIPT_DIR"/recipes/*/; do
     recipe_name=$(basename "$recipe_dir")
     rm -rf ~/.local/share/goose/recipes/"$recipe_name"
     cp -r "$recipe_dir" ~/.local/share/goose/recipes/"$recipe_name"
-    echo "  ✓ recipe: $recipe_name"
+    echo "  - recipe: $recipe_name"
 done
 
 # --- Deploy requested projects ---
@@ -45,7 +45,7 @@ for project in "$@"; do
     project_dir="$SCRIPT_DIR/projects/$project"
     if [ ! -d "$project_dir" ]; then
         echo ""
-        echo "  ⚠ Project '$project' not found in projects/, skipping"
+        echo "  WARNING: Project '$project' not found in projects/, skipping"
         continue
     fi
 
@@ -59,7 +59,7 @@ for project in "$@"; do
             recipe_name=$(basename "$recipe")
             rm -rf ~/.local/share/goose/recipes/"$recipe_name"
             cp -r "$recipe" ~/.local/share/goose/recipes/"$recipe_name"
-            echo "  ✓ recipe: $recipe_name"
+            echo "  - recipe: $recipe_name"
         done
     fi
 
@@ -70,7 +70,7 @@ for project in "$@"; do
         # Deploy .goosehints to project directory
         if [ -f "$project_dir/goosehints" ]; then
             cp "$project_dir/goosehints" "$PROJECT_PATH/.goosehints"
-            echo "  ✓ .goosehints → $PROJECT_PATH/"
+            echo "  - .goosehints → $PROJECT_PATH/"
         fi
 
         # Deploy project-level skills
@@ -81,11 +81,11 @@ for project in "$@"; do
                 skill_name=$(basename "$skill_dir")
                 rm -rf "$PROJECT_PATH/.agents/skills/$skill_name"
                 cp -r "$skill_dir" "$PROJECT_PATH/.agents/skills/$skill_name"
-                echo "  ✓ project skill: $skill_name"
+                echo "  - project skill: $skill_name"
             done
         fi
     else
-        echo "  ⚠ $project directory not found on this VM, skipped local deployment"
+        echo "  WARNING: $project directory not found on this VM, skipped local deployment"
     fi
 done
 
@@ -100,11 +100,11 @@ if ! grep -q "goose_env" ~/.bashrc 2>/dev/null; then
     echo "" >> ~/.bashrc
     echo 'source ~/.goose_env  # goose_env' >> ~/.bashrc
     echo ""
-    echo "  ✓ shell environment added to .bashrc"
+    echo "  - shell environment added to .bashrc"
 fi
 
 source "$GOOSE_ENV_FILE"
 
 echo ""
-echo "🪿 Done! Start a new session: goose session"
+echo "Done! Start a new session: goose session"
 echo "   Slash commands: /bug  /design  /explore  /capture"
