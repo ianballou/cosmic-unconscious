@@ -97,8 +97,28 @@ done
 echo ""
 echo "=== GCP Configuration ==="
 
-read -rp "  GCP Project ID: " GCP_PROJECT_ID
-read -rp "  GCP Location:   " GCP_LOCATION
+# Pull existing values from goose_env if present
+GOOSE_ENV_FILE=~/.goose_env
+if [ -f "$GOOSE_ENV_FILE" ]; then
+    _existing_project=$(grep '^export GCP_PROJECT_ID=' "$GOOSE_ENV_FILE" 2>/dev/null \
+        | sed 's/^export GCP_PROJECT_ID="//' | sed 's/"$//')
+    _existing_location=$(grep '^export GCP_LOCATION=' "$GOOSE_ENV_FILE" 2>/dev/null \
+        | sed 's/^export GCP_LOCATION="//' | sed 's/"$//')
+fi
+
+if [ -n "$_existing_project" ]; then
+    echo "  GCP Project ID: $_existing_project (from existing config)"
+    GCP_PROJECT_ID="$_existing_project"
+else
+    read -rp "  GCP Project ID: " GCP_PROJECT_ID
+fi
+
+if [ -n "$_existing_location" ]; then
+    echo "  GCP Location:   $_existing_location (from existing config)"
+    GCP_LOCATION="$_existing_location"
+else
+    read -rp "  GCP Location:   " GCP_LOCATION
+fi
 
 if [ -z "$GCP_PROJECT_ID" ] || [ -z "$GCP_LOCATION" ]; then
     echo ""
@@ -107,7 +127,6 @@ if [ -z "$GCP_PROJECT_ID" ] || [ -z "$GCP_LOCATION" ]; then
 fi
 
 # --- Shell environment ---
-GOOSE_ENV_FILE=~/.goose_env
 cat > "$GOOSE_ENV_FILE" << EOF
 export GOOSE_MOIM_MESSAGE_FILE="\$HOME/.config/goose/guardrails.md"
 export GOOSE_RECIPE_PATH="\$HOME/.local/share/goose/recipes"
