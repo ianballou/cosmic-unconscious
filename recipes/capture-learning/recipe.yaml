@@ -1,0 +1,24 @@
+version: 1.0.0
+title: "Capture Session Learnings"
+description: "Review what was learned and update skills, docs, and hints"
+instructions: |
+  Review the conversation so far and help capture what we learned.
+
+  Ask:
+  1. Did we discover any codebase patterns worth documenting?
+  2. Did we hit any gotchas or surprises?
+  3. Did we establish any conventions to follow next time?
+  4. Were there corrections you gave me? (Those are the most important.)
+
+  Then propose specific edits to the appropriate files:
+  - Skills in .agents/skills/*/SKILL.md for codebase patterns
+  - Global skills in ~/cosmic-unconscious/global/skills/ for cross-project patterns
+  - Project docs (gotchas.md, patterns.md) for project-specific knowledge
+  - .goosehints for conventions
+
+  Show each proposed edit before applying. Keep entries concise —
+  one to two lines each. These are for an AI to read, not humans.
+
+  After applying, remind me to commit: cd ~/cosmic-unconscious && git add -A && git commit -m "capture learnings"
+
+prompt: "Let's capture what we learned this session."

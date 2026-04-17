@@ -1,0 +1,66 @@
+# cosmic-unconscious goose configuration
+# Provider settings — preserved from existing setup
+GCP_PROJECT_ID: itpc-gcp-core-pe-eng-claude
+GCP_LOCATION: us-east5
+GCP_MAX_RETRIES: '6'
+GCP_INITIAL_RETRY_INTERVAL_MS: '5000'
+GCP_BACKOFF_MULTIPLIER: '2'
+GCP_MAX_RETRY_INTERVAL_MS: '320000'
+CLAUDE_THINKING_TYPE: adaptive
+CLAUDE_THINKING_EFFORT: high
+GOOSE_PROVIDER: gcp_vertex_ai
+GOOSE_MODEL: claude-opus-4-6
+GOOSE_TELEMETRY_ENABLED: false
+GOOSE_CLI_THEME: light
+
+# Behavior
+GOOSE_MODE: auto
+
+# Slash commands
+slash_commands:
+  - command: "bug"
+    recipe_path: "~/.local/share/goose/recipes/investigate-bug/recipe.yaml"
+  - command: "design"
+    recipe_path: "~/.local/share/goose/recipes/design-feature/recipe.yaml"
+  - command: "explore"
+    recipe_path: "~/.local/share/goose/recipes/find-code/recipe.yaml"
+  - command: "capture"
+    recipe_path: "~/.local/share/goose/recipes/capture-learning/recipe.yaml"
+
+# Extensions
+extensions:
+  developer:
+    enabled: true
+    type: platform
+    name: developer
+    bundled: true
+  analyze:
+    enabled: true
+    type: platform
+    name: analyze
+    bundled: true
+  summon:
+    enabled: true
+    type: platform
+    name: summon
+    bundled: true
+  skills:
+    enabled: true
+    type: platform
+    name: skills
+    bundled: true
+  todo:
+    enabled: true
+    type: platform
+    name: todo
+    bundled: true
+  tom:
+    enabled: true
+    type: platform
+    name: tom
+    bundled: true
+  extensionmanager:
+    enabled: true
+    type: platform
+    name: Extension Manager
+    bundled: true

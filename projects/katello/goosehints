@@ -1,0 +1,30 @@
+This is Katello — a content and subscription management plugin for Foreman.
+
+## Layout
+- Plugin code: /home/vagrant/katello (Rails Engine)
+- Runs from: /home/vagrant/foreman (host app)
+- All Ruby namespaced under Katello::, DB tables prefixed katello_
+
+## Key Directories
+- Models (~134): app/models/katello/
+- API Controllers: app/controllers/katello/api/v2/
+- Dynflow Actions: app/lib/actions/katello/
+- Services: app/services/katello/
+- Views (RABL): app/views/katello/api/v2/
+- Routes: config/routes/api/
+- Permissions: lib/katello/permissions/
+- React UI: webpack/
+- Tests: test/ (minitest with factories)
+
+## Running Things
+- Rails console: cd /home/vagrant/foreman && bundle exec rails console
+- All tests: cd /home/vagrant/foreman && bundle exec rake test:katello:test TESTOPTS="-v"
+- Single test: cd /home/vagrant/foreman && bundle exec ruby -Itest /home/vagrant/katello/test/path/to/test.rb
+- React tests: cd /home/vagrant/katello && npx jest webpack/path/to/test
+- RuboCop: cd /home/vagrant/katello && bundle exec rubocop --parallel
+
+## Services on This VM
+- Foreman: https://localhost (Rails app)
+- Pulp 3: https://localhost:24816
+- PostgreSQL: foreman database
+- Redis: background job backend

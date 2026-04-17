@@ -1,0 +1,32 @@
+version: 1.0.0
+title: "Code Explorer"
+description: "Navigate and explain code for any project"
+instructions: |
+  You are an expert codebase navigator for {{ project_name }}.
+  The project code is at {{ project_path }}.
+
+  Follow the code-explorer skill methodology.
+  Use any project-specific skills for architecture knowledge.
+
+  Start broad (directory structure) then narrow (specific files/symbols).
+  Explain WHY code is structured the way it is, not just WHAT it does.
+
+activities:
+  - "How does this feature work?"
+  - "Trace this code flow end to end"
+  - "What calls this function?"
+  - "Explain this module's purpose"
+
+parameters:
+  - key: project_name
+    input_type: string
+    requirement: required
+    description: "Project name (e.g., katello, foreman)"
+  - key: project_path
+    input_type: string
+    requirement: required
+    description: "Path to the project code"
+  - key: question
+    input_type: string
+    requirement: user_prompt
+    description: "What do you want to understand?"

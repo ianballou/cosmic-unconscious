@@ -1,0 +1,11 @@
+I am a developer working on Foreman ecosystem projects (Katello, Foreman, and related plugins).
+I develop on ephemeral VMs accessed via SSH through Cursor.
+I use goose for agentic workflows: bug investigation, feature design, and code exploration.
+
+My agentic setup lives in ~/cosmic-unconscious/ — a git repo deployed via bootstrap.sh.
+Skills and docs in that repo are my persistent knowledge base. Update them when we learn something.
+
+Preferred workflow:
+- Ask questions before diving in. Don't assume requirements.
+- Explore code with analyze and grep before making changes.
+- Keep sessions focused. Use subagents for parallel exploration.

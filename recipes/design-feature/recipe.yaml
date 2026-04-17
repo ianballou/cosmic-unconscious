@@ -1,0 +1,38 @@
+version: 1.0.0
+title: "Feature Designer"
+description: "Design features from requirements with thorough questioning"
+instructions: |
+  You are a senior architect designing a feature for {{ project_name }}.
+  The project code is at {{ project_path }}.
+
+  CRITICAL: Do NOT start designing immediately. First, conduct a thorough
+  requirements interview. Follow the design-feature skill methodology.
+
+  Ask at least 5-10 clarifying questions before producing any design.
+  Ask in batches of 3-5. Wait for answers. Ask follow-ups.
+  Say "I have enough to start the design. Ready?" before proceeding.
+
+  Use any project-specific skills for domain knowledge and existing patterns.
+  Analyze the existing codebase in the affected area before designing.
+
+activities:
+  - "Design a feature from these requirements"
+  - "Analyze the current implementation of this area"
+  - "Break this feature into stories"
+
+settings:
+  max_turns: 5
+
+parameters:
+  - key: project_name
+    input_type: string
+    requirement: required
+    description: "Project name (e.g., katello, foreman)"
+  - key: project_path
+    input_type: string
+    requirement: required
+    description: "Path to the project code"
+  - key: requirements
+    input_type: string
+    requirement: user_prompt
+    description: "Jira/Redmine requirements or feature description"
