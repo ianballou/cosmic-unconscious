@@ -64,6 +64,37 @@ Then commit:
 cd ~/cosmic-unconscious && git add -A && git commit -m "learnings: <what you learned>"
 ```
 
+## Gotchas
+
+### Recipe file structure
+
+Goose discovers recipes by scanning for `*.yaml` / `*.json` files directly
+inside `GOOSE_RECIPE_PATH` directories (and `~/.config/goose/recipes/`).
+It does NOT recurse into subdirectories.
+
+This means recipes must be deployed as flat files:
+
+```
+~/.local/share/goose/recipes/
+  find-code.yaml          # CORRECT -- goose finds this
+  investigate-bug.yaml
+
+  find-code/
+    recipe.yaml           # WRONG  -- goose ignores subdirectories
+```
+
+The bootstrap script copies `recipes/<name>/recipe.yaml` as
+`~/.local/share/goose/recipes/<name>.yaml`. If you add a new recipe,
+keep the repo structure (`recipes/<name>/recipe.yaml`) and bootstrap
+handles the flattening.
+
+Slash commands in `global/config.yaml` must reference the flat path too:
+
+```yaml
+- command: "explore"
+  recipe_path: "~/.local/share/goose/recipes/find-code.yaml"   # flat
+```
+
 ## Where Things Deploy
 
 | Source | Destination |

@@ -35,8 +35,7 @@ done
 for recipe_dir in "$SCRIPT_DIR"/recipes/*/; do
     [ -d "$recipe_dir" ] || continue
     recipe_name=$(basename "$recipe_dir")
-    rm -rf ~/.local/share/goose/recipes/"$recipe_name"
-    cp -r "$recipe_dir" ~/.local/share/goose/recipes/"$recipe_name"
+    cp "$recipe_dir/recipe.yaml" ~/.local/share/goose/recipes/"${recipe_name}.yaml"
     echo "  - recipe: $recipe_name"
 done
 
@@ -57,8 +56,7 @@ for project in "$@"; do
         for recipe in "$project_dir"/recipes/*/; do
             [ -d "$recipe" ] || continue
             recipe_name=$(basename "$recipe")
-            rm -rf ~/.local/share/goose/recipes/"$recipe_name"
-            cp -r "$recipe" ~/.local/share/goose/recipes/"$recipe_name"
+            cp "$recipe/recipe.yaml" ~/.local/share/goose/recipes/"${recipe_name}.yaml"
             echo "  - recipe: $recipe_name"
         done
     fi

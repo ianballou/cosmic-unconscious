@@ -19,13 +19,15 @@ GOOSE_MODE: auto
 # Slash commands
 slash_commands:
   - command: "bug"
-    recipe_path: "~/.local/share/goose/recipes/investigate-bug/recipe.yaml"
+    recipe_path: "~/.local/share/goose/recipes/investigate-bug.yaml"
   - command: "design"
-    recipe_path: "~/.local/share/goose/recipes/design-feature/recipe.yaml"
+    recipe_path: "~/.local/share/goose/recipes/design-feature.yaml"
   - command: "explore"
-    recipe_path: "~/.local/share/goose/recipes/find-code/recipe.yaml"
+    recipe_path: "~/.local/share/goose/recipes/find-code.yaml"
   - command: "capture"
-    recipe_path: "~/.local/share/goose/recipes/capture-learning/recipe.yaml"
+    recipe_path: "~/.local/share/goose/recipes/capture-learning.yaml"
+  - command: "review"
+    recipe_path: "~/.local/share/goose/recipes/code-review.yaml"
 
 # Extensions
 extensions:
