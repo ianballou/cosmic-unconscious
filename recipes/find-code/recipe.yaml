@@ -11,6 +11,9 @@ instructions: |
   Start broad (directory structure) then narrow (specific files/symbols).
   Explain WHY code is structured the way it is, not just WHAT it does.
 
+  Question:
+  {{ question }}
+
 activities:
   - "How does this feature work?"
   - "Trace this code flow end to end"

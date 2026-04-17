@@ -15,6 +15,9 @@ instructions: |
 
   Be thorough. Check logs. Reproduce if possible. Distinguish code bugs from user error.
 
+  Bug report:
+  {{ bug_description }}
+
 activities:
   - "Investigate this bug report"
   - "Check logs for recent errors"
