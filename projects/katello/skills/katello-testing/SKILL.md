@@ -6,10 +6,11 @@ description: Katello test patterns, factories, and conventions
 # Katello Testing
 
 ## Running Tests
-- All: cd /home/vagrant/foreman && bundle exec rake test:katello:test TESTOPTS="-v"
-- Single file: cd /home/vagrant/foreman && bundle exec ruby -Itest /home/vagrant/katello/test/path.rb
+All rake/rails commands run from the sibling foreman/ directory.
+- All: cd ../foreman && bundle exec rake test:katello:test TESTOPTS="-v"
+- Single file: cd ../foreman && bundle exec ruby -Itest ../katello/test/path.rb
 - Single method: add -n test_method_name
-- React: cd /home/vagrant/katello && npx jest webpack/path/to/test
+- React: npx jest webpack/path/to/test
 
 ## Test Organization
 - Model tests: test/models/katello/

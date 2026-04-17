@@ -1,8 +1,11 @@
-This is Katello — a content and subscription management plugin for Foreman.
+This is Katello -- a content and subscription management plugin for Foreman.
+
+## Additional Context
+- Read CLAUDE.md at the top level of this repo for detailed project conventions, command references, and architectural guidance.
 
 ## Layout
-- Plugin code: /home/vagrant/katello (Rails Engine)
-- Runs from: /home/vagrant/foreman (host app)
+- Plugin code: this directory (Rails Engine)
+- Runs from: the sibling foreman/ directory (host app)
 - All Ruby namespaced under Katello::, DB tables prefixed katello_
 
 ## Key Directories
@@ -17,11 +20,12 @@ This is Katello — a content and subscription management plugin for Foreman.
 - Tests: test/ (minitest with factories)
 
 ## Running Things
-- Rails console: cd /home/vagrant/foreman && bundle exec rails console
-- All tests: cd /home/vagrant/foreman && bundle exec rake test:katello:test TESTOPTS="-v"
-- Single test: cd /home/vagrant/foreman && bundle exec ruby -Itest /home/vagrant/katello/test/path/to/test.rb
-- React tests: cd /home/vagrant/katello && npx jest webpack/path/to/test
-- RuboCop: cd /home/vagrant/katello && bundle exec rubocop --parallel
+All rake/rails commands run from the foreman directory (sibling to this repo).
+- Rails console: cd ../foreman && bundle exec rails console
+- All tests: cd ../foreman && bundle exec rake test:katello:test TESTOPTS="-v"
+- Single test: cd ../foreman && bundle exec ruby -Itest ../katello/test/path/to/test.rb
+- React tests: npx jest webpack/path/to/test
+- RuboCop: bundle exec rubocop --parallel
 
 ## Services on This VM
 - Foreman: https://localhost (Rails app)

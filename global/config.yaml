@@ -1,7 +1,7 @@
 # cosmic-unconscious goose configuration
 # Provider settings — preserved from existing setup
-GCP_PROJECT_ID: itpc-gcp-core-pe-eng-claude
-GCP_LOCATION: us-east5
+#GCP_PROJECT_ID:
+#GCP_LOCATION:
 GCP_MAX_RETRIES: '6'
 GCP_INITIAL_RETRY_INTERVAL_MS: '5000'
 GCP_BACKOFF_MULTIPLIER: '2'

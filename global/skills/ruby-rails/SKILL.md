@@ -6,14 +6,14 @@ description: Ruby on Rails conventions and patterns for Foreman ecosystem projec
 # Ruby / Rails Patterns
 
 ## Testing
-- Run tests from the Foreman root: `cd /home/vagrant/foreman`
+All rake/rails commands run from the foreman directory.
 - Katello tests: `bundle exec rake test:katello:test TESTOPTS="-v"`
 - Single test file: `bundle exec ruby -Itest /path/to/test.rb`
 - Single test method: `bundle exec ruby -Itest /path/to/test.rb -n test_method_name`
-- RuboCop: `cd /home/vagrant/katello && bundle exec rubocop --parallel`
+- RuboCop (from katello dir): `bundle exec rubocop --parallel`
 
 ## Rails Console
-- `cd /home/vagrant/foreman && bundle exec rails console`
+- From the foreman directory: `bundle exec rails console`
 
 ## Common Patterns
 - Factories use FactoryBot: `FactoryBot.create(:katello_repository)`

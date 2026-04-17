@@ -63,8 +63,12 @@ for project in "$@"; do
         done
     fi
 
-    # Detect project path on this VM
-    PROJECT_PATH=$(find /home/vagrant -maxdepth 2 -type d -name "$project" 2>/dev/null | head -1)
+    # Detect project path -- check sibling to this repo, then under $HOME
+    if [ -d "$SCRIPT_DIR/../$project" ]; then
+        PROJECT_PATH="$(cd "$SCRIPT_DIR/../$project" && pwd)"
+    else
+        PROJECT_PATH=$(find "$HOME" -maxdepth 2 -type d -name "$project" 2>/dev/null | head -1)
+    fi
 
     if [ -n "$PROJECT_PATH" ]; then
         # Deploy .goosehints to project directory
@@ -89,11 +93,26 @@ for project in "$@"; do
     fi
 done
 
+# --- GCP configuration ---
+echo ""
+echo "=== GCP Configuration ==="
+
+read -rp "  GCP Project ID: " GCP_PROJECT_ID
+read -rp "  GCP Location:   " GCP_LOCATION
+
+if [ -z "$GCP_PROJECT_ID" ] || [ -z "$GCP_LOCATION" ]; then
+    echo ""
+    echo "  WARNING: GCP Project ID and Location are required."
+    echo "           Re-run bootstrap.sh to set them."
+fi
+
 # --- Shell environment ---
 GOOSE_ENV_FILE=~/.goose_env
-cat > "$GOOSE_ENV_FILE" << 'EOF'
-export GOOSE_MOIM_MESSAGE_FILE="$HOME/.config/goose/guardrails.md"
-export GOOSE_RECIPE_PATH="$HOME/.local/share/goose/recipes"
+cat > "$GOOSE_ENV_FILE" << EOF
+export GOOSE_MOIM_MESSAGE_FILE="\$HOME/.config/goose/guardrails.md"
+export GOOSE_RECIPE_PATH="\$HOME/.local/share/goose/recipes"
+export GCP_PROJECT_ID="$GCP_PROJECT_ID"
+export GCP_LOCATION="$GCP_LOCATION"
 EOF
 
 if ! grep -q "goose_env" ~/.bashrc 2>/dev/null; then

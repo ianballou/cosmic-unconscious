@@ -1,7 +1,7 @@
-This is Foreman — a lifecycle management tool for physical and virtual servers.
+This is Foreman -- a lifecycle management tool for physical and virtual servers.
 
 ## Layout
-- Code: /home/vagrant/foreman
+- Code: this directory
 - Katello and other plugins mount into this app via Rails Engines
 - Plugin registration: bundler.d/*.local.rb
 
@@ -14,9 +14,10 @@ This is Foreman — a lifecycle management tool for physical and virtual servers
 - GraphQL: app/graphql/
 
 ## Running Things
-- Rails console: cd /home/vagrant/foreman && bundle exec rails console
-- Tests: cd /home/vagrant/foreman && bundle exec rake test
-- Single test: cd /home/vagrant/foreman && bundle exec ruby -Itest test/path/to/test.rb
+All commands run from this directory.
+- Rails console: bundle exec rails console
+- Tests: bundle exec rake test
+- Single test: bundle exec ruby -Itest test/path/to/test.rb
 
 ## Relationship to Katello
 - Katello is a plugin registered in bundler.d/katello.local.rb

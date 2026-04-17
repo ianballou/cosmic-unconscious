@@ -73,5 +73,5 @@ cd ~/cosmic-unconscious && git add -A && git commit -m "learnings: <what you lea
 | `global/goosehints` | `~/.config/goose/.goosehints` |
 | `global/skills/*` | `~/.agents/skills/` |
 | `recipes/*` | `~/.local/share/goose/recipes/` |
-| `projects/<p>/goosehints` | `/home/vagrant/<p>/.goosehints` |
-| `projects/<p>/skills/*` | `/home/vagrant/<p>/.agents/skills/` |
+| `projects/<p>/goosehints` | `<project_dir>/.goosehints` |
+| `projects/<p>/skills/*` | `<project_dir>/.agents/skills/` |

@@ -9,7 +9,7 @@ instructions: |
   Use any project-specific skills available in your context for domain knowledge.
 
   Key resources on this VM:
-  - Rails console: cd /home/vagrant/foreman && bundle exec rails console
+  - Rails console: cd ../foreman && bundle exec rails console (run from foreman sibling dir)
   - Logs: /var/log/foreman/, /var/log/messages
   - Pulp API: https://localhost:24816
 
