@@ -26,6 +26,8 @@ slash_commands:
     recipe_path: "~/.local/share/goose/recipes/find-code.yaml"
   - command: "capture"
     recipe_path: "~/.local/share/goose/recipes/capture-learning.yaml"
+  - command: "fix"
+    recipe_path: "~/.local/share/goose/recipes/fix-bug.yaml"
   - command: "review"
     recipe_path: "~/.local/share/goose/recipes/code-review.yaml"
 

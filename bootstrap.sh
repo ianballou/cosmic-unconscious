@@ -5,7 +5,11 @@
 #        ./bootstrap.sh katello foreman    # Global + Katello + Foreman
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -n "${BASH_SOURCE[0]}" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+  SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+fi
 
 echo "cosmic-unconscious: deploying goose configuration..."
 echo ""
@@ -143,4 +147,9 @@ source "$GOOSE_ENV_FILE"
 
 echo ""
 echo "Done! Start a new session: goose session"
-echo "   Slash commands: /bug  /design  /explore  /capture"
+echo ""
+echo "Available recipes:"
+goose recipe list 2>/dev/null | grep -v "^Available" | sed 's/^/  /' || echo "  (run 'goose recipe list' to see available recipes)"
+echo ""
+echo "Launch recipes with:  goose run --recipe <name> -s"
+echo "Or via slash commands: /bug  /fix  /design  /explore  /review  /capture"
