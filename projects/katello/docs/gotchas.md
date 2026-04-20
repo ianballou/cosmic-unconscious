@@ -16,6 +16,24 @@ fields are nested. So when calling the API directly you must send:
 }
 ```
 
+## Repositories controller assigns deb_* fields unconditionally regardless of content_type
+
+In `Api::V2::RepositoriesController`, `deb_releases`, `deb_components`, and
+`deb_architectures` are permitted params and assigned to the root repo without
+any content_type guard:
+
+```ruby
+root.deb_releases = repo_params[:deb_releases] if repo_params[:deb_releases]
+root.deb_components = repo_params[:deb_components] if repo_params[:deb_components]
+root.deb_architectures = repo_params[:deb_architectures] if repo_params[:deb_architectures]
+```
+
+Passing these fields to a yum or file repository via the API produces a 201 with
+no error. The model's only protection (`ensure_valid_deb_constraints`) is gated
+with `if: :deb?` and only checks internal consistency (releases ↔ url), not that
+the fields are absent on non-deb types. Pre-existing pattern — not specific to any
+one PR.
+
 ## deb_* fields on non-deb records are silently ignored (pre-existing pattern)
 
 Passing `deb_releases`, `deb_components`, or `deb_architectures` to a yum or
