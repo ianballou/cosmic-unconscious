@@ -1,5 +1,8 @@
 This is Foreman -- a lifecycle management tool for physical and virtual servers.
 
+## Additional Context
+- Accumulated project knowledge (gotchas, patterns) lives in ~/cosmic-unconscious/projects/foreman/docs/. Read the relevant file before investigating bugs or reviewing code.
+
 ## Layout
 - Code: this directory
 - Katello and other plugins mount into this app via Rails Engines

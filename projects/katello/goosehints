@@ -2,6 +2,7 @@ This is Katello -- a content and subscription management plugin for Foreman.
 
 ## Additional Context
 - Read CLAUDE.md at the top level of this repo for detailed project conventions, command references, and architectural guidance.
+- Accumulated project knowledge (gotchas, patterns, Pulp image workflows) lives in ~/cosmic-unconscious/projects/katello/docs/. Read the relevant file before investigating bugs or reviewing code.
 
 ## Layout
 - Plugin code: this directory (Rails Engine)
