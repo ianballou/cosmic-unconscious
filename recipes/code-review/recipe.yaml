@@ -63,6 +63,17 @@ instructions: |
   the feature. Check that the new behavior works as described and that obvious
   regressions do not appear.
 
+  When testing via API:
+  - Do a sanity check first (list or index endpoint) to confirm access.
+  - Test all content/type combinations that the code branches on, not just
+    the happy path. The most revealing tests are often the cross-type ones
+    (e.g., sending deb fields to a yum ACS).
+  - Before calling a finding a bug, check whether the same behaviour exists
+    on analogous entities (e.g., repositories). If it does, it's a pre-existing
+    pattern, not a regression from this PR — adjust severity accordingly.
+  - When a validation appears missing, confirm it is actually missing by testing
+    directly against the API, not just by reading the code.
+
   If testing is skipped, acknowledge it and move on.
 
   ============================================================
@@ -75,6 +86,16 @@ instructions: |
   - Does the code follow the project's existing conventions and style?
   - Does it do things very differently from how similar things are done
     elsewhere in the codebase? If so, is there a good reason?
+  - When new validators are added, compare their guard conditions against
+    analogous existing validators on the same model. A new validator that
+    early-returns for a case that an existing validator covers actively
+    may silently skip validation for that case. Always ask: does this new
+    validator cover all the same cases as its neighbours?
+  - When new fields are added to a model, check whether other similar
+    entities (e.g. sibling models, related API endpoints) have the same
+    fields, and whether their validation pattern is consistent. If the
+    new code follows a pattern that already exists elsewhere, it may be
+    inheriting a pre-existing known issue rather than introducing a new bug.
 
   CORRECTNESS:
   - Are there typos in variable names, method names, or strings?
