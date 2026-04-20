@@ -26,6 +26,19 @@ description: Systematic approach to investigating software bugs
 - When was it introduced? (git log, git blame)
 - What's the minimal fix vs. proper fix?
 
+### Tracing data across system boundaries
+When a fix involves data that crosses repos or subsystems (e.g., Katello
+code that feeds a Foreman report template, or Dynflow actions whose data
+is read by a rake task), trace the full path:
+- What populates the field? Which repo/component writes it?
+- What consumes the field? Does the consumer actually use every field
+  the producer computes?
+- Do the types match? (e.g., string vs uuid, symbol keys vs string keys)
+- If a fix changes the producer's output, does the consumer's interface
+  (options, parameters, column headers) still make sense?
+- Check for "orphaned" options — e.g., a UI dropdown offering a choice
+  that the backend silently ignores after a refactor.
+
 ## Step 5: Document
 - Root cause with code references
 - Log evidence

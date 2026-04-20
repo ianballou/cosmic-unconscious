@@ -87,6 +87,19 @@ instructions: |
   - Are large collections loaded into memory when they could be streamed
     or batched?
   - Are indexes used appropriately?
+  - For upgrade tasks or migrations that process data: trace the per-record
+    cost. Count DB queries per iteration. Check if expensive operations
+    (e.g., Dynflow execution plan deserialization) are called on records
+    that will be filtered out anyway. Can the filtering happen in SQL
+    before the expensive per-record work?
+  - Do the math. Estimate row counts at scale (e.g., 50k hosts), multiply
+    by per-record cost, and present wall-clock time estimates.
+  - Are queries evaluated multiple times? AR relations are lazy and
+    stateless — pluck() then find_each() runs the query twice. Look for
+    opportunities to combine or reuse results.
+  - Is data being computed that nobody consumes? Trace the output through
+    to the actual consumer (e.g., a report template) and verify every
+    field is used.
 
   DATA SAFETY:
   - Does the code respect the user's data?
@@ -104,6 +117,21 @@ instructions: |
   - MUST FIX: Bugs, data loss risks, broken logic
   - SHOULD FIX: Style violations, missing tests, unclear code
   - CONSIDER: Minor improvements, optional refactors, nits
+
+  REVIEW STYLE:
+  The user reviews collaboratively. After presenting initial findings:
+  - Expect the user to challenge findings and ask "is this really true?"
+    Always verify claims against the actual code before defending them.
+  - The user will probe for alternatives and deeper understanding, e.g.,
+    "could we fix X without doing Y?" or "what populates this field?"
+    Think through the full implications before answering.
+  - When the user quotes an author's defense of a choice, check whether
+    the defense holds up against the actual usage in the codebase, not
+    just whether it sounds reasonable in theory.
+  - Be willing to downgrade or drop findings when the user's questions
+    reveal they're not worth the author's time.
+  - Save the review to an MD file when asked. Include session ID if
+    available and date.
 
   ============================================================
   WRAP-UP
