@@ -1,0 +1,30 @@
+# Foremanctl Migration Project
+# Migrating foreman-maintain functionality into foremanctl
+
+## Context
+- foreman-maintain: Ruby-based tool (Clamp CLI) for health checks, maintenance, upgrades of Foreman/Katello
+- foremanctl: Python/Ansible-based tool (Obsah CLI framework wrapping Ansible playbooks) for containerized Foreman deployment
+- Source repos:
+  - /home/vagrant/foreman_maintain (foreman-maintain, Ruby)
+  - /home/vagrant/foremanctl (foremanctl, Python/Ansible)
+- See docs/ for evolving design, migration map, and discoveries
+
+## Architecture Quick Reference
+- foremanctl commands = Ansible playbooks in src/playbooks/<name>/<name>.yaml
+- foremanctl checks = Ansible roles in src/roles/check_<name>/, registered in src/roles/checks/tasks/main.yml
+- foremanctl features = plugin registry in src/features.yaml (NOT same as foreman-maintain features)
+- CLI framework = obsah (pip package), auto-discovers playbooks, exposes as subcommands
+- CLI params defined in metadata.obsah.yaml per playbook, passed as Ansible extra vars
+- Output formatting via custom Ansible callback plugin in src/callback_plugins/foremanctl.py
+
+## Current State (as of 2026-04-21)
+- foremanctl has 4 commands: checks, deploy, features, pull-images
+- foreman-maintain has 12 commands: health, upgrade, update, service, backup, restore, packages, advanced, plugin, self-upgrade, maintenance-mode, report
+- ~53 checks in foreman-maintain, 4-6 check roles in foremanctl
+- Migration priority: health checks → service mgmt → maintenance mode → packages → backup/restore → upgrade
+
+## Key Files
+- Migration map: docs/migration-map.md
+- Design decisions: docs/design.md
+- Patterns for adding features: docs/patterns.md
+- Surprises and pitfalls: docs/gotchas.md
