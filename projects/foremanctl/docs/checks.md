@@ -135,22 +135,27 @@ In foremanctl's containerized model:
 ### foreman_tasks/not_paused — KEEP
 **What it does**: Checks for paused Foreman tasks.
 **Decision**: Application-level concern. Can check via `/api/v2/ping` (which reports foreman_tasks status) or direct DB/API query.
+**Note**: Investigate using Foreman Ansible Modules (`theforeman.foreman`) for task queries — need to verify if they expose task state.
 
 ### foreman_tasks/not_running — KEEP
 **What it does**: Checks for running tasks before upgrade. Can wait for completion.
-**Decision**: Critical pre-upgrade check — must not upgrade while tasks are running. API or DB query.
+**Decision**: Critical pre-upgrade check — must not upgrade while tasks are running.
+**Note**: Investigate using Foreman Ansible Modules for task queries.
 
 ### foreman_tasks/invalid/check_old — KEEP
 **What it does**: Finds tasks >30 days old in paused/stopped state.
-**Decision**: Database hygiene. Still valid. DB query.
+**Decision**: Database hygiene. Still valid.
+**Note**: Investigate using Foreman Ansible Modules for task queries.
 
 ### foreman_tasks/invalid/check_pending_state — KEEP
 **What it does**: Finds tasks stuck in pending state.
-**Decision**: Still valid. DB query.
+**Decision**: Still valid.
+**Note**: Investigate using Foreman Ansible Modules for task queries.
 
 ### foreman_tasks/invalid/check_planning_state — KEEP
 **What it does**: Finds tasks stuck in planning state.
-**Decision**: Still valid. DB query.
+**Decision**: Still valid.
+**Note**: Investigate using Foreman Ansible Modules for task queries.
 
 ### pulpcore/no_running_tasks — KEEP
 **What it does**: Checks for active Pulpcore tasks.
@@ -220,25 +225,25 @@ In foremanctl's containerized model:
 
 ## Plugin-specific Checks
 
-### foreman_openscap/invalid_report_associations — KEEP (if OpenSCAP supported)
+### foreman_openscap/invalid_report_associations — KEEP
 **What it does**: Finds OpenSCAP reports with broken associations.
-**Decision**: Application data issue, but OpenSCAP isn't currently a foremanctl feature. Add when/if OpenSCAP support is added.
+**Decision**: Application data issue. OpenSCAP is a supported plugin. DB query check.
 
-### foreman_proxy/check_tftp_storage — DROP (for now)
+### foreman_proxy/check_tftp_storage — KEEP (rethink implementation)
 **What it does**: Cleans old kernel/initramfs files from TFTP boot dir.
-**Decision**: TFTP is not currently supported in foremanctl. Add if/when TFTP support arrives.
+**Decision**: TFTP is a major provisioning component and will be supported. Implementation may change depending on whether TFTP runs on host or in container.
 
-### foreman_proxy/verify_dhcp_config_syntax — DROP (for now)
+### foreman_proxy/verify_dhcp_config_syntax — KEEP (rethink implementation)
 **What it does**: Validates ISC DHCP config.
-**Decision**: DHCP is not currently supported in foremanctl. Add if/when DHCP support arrives.
+**Decision**: DHCP is a major provisioning component and will be supported. Implementation depends on where DHCP config lives in containerized model.
 
-### puppet/verify_no_empty_cacert_requests — DROP
+### puppet/verify_no_empty_cacert_requests — KEEP (BYOP context)
 **What it does**: Checks for empty Puppet CA cert request files.
-**Decision**: Puppet is not part of containerized Foreman's default features. The puppet purge work (SAT-40445) handles removal. Don't add puppet health checks.
+**Decision**: Puppet is BYOP (Bring Your Own Puppet) — not deployed by foremanctl, but Foreman still integrates with it. This check is only relevant if the user has Puppet set up. Should be conditional on puppet feature being detected.
 
-### foreman/check_puppet_capsules — DROP
+### foreman/check_puppet_capsules — KEEP (BYOP context)
 **What it does**: Finds Smart Proxies with Puppet feature.
-**Decision**: Only relevant for Puppet removal workflow (SAT-40445).
+**Decision**: Relevant for environments using BYOP. Conditional on puppet integration being present.
 
 ---
 
@@ -289,9 +294,9 @@ Check that systemd timers for recurring Foreman tasks (hourly, daily, weekly, mo
 
 | Decision | Count | Checks |
 |----------|-------|--------|
-| **KEEP** | ~22 | check_tmout, env_proxy, check_ipv6_disable, disk/available_space, disk/performance, db_up (×3), db_index (×3), validate_external_db_version, check_external_db_evr_permissions, facts_names, check_corrupted_roles, check_duplicate_permissions, server_ping, services_up, foreman_tasks (×5), pulpcore/no_running_tasks, check_sha1_ca, container/podman_login, restore/validate_hostname, restore/validate_interfaces |
+| **KEEP** | ~28 | check_tmout, env_proxy, check_ipv6_disable, disk/available_space, disk/performance, db_up (×3), db_index (×3), validate_external_db_version, check_external_db_evr_permissions, facts_names, check_corrupted_roles, check_duplicate_permissions, server_ping, services_up, foreman_tasks (×5), pulpcore/no_running_tasks, check_sha1_ca, container/podman_login, restore/validate_hostname, restore/validate_interfaces, foreman_openscap, check_tftp_storage, verify_dhcp_config, puppet checks (×2 BYOP conditional) |
 | **RETHINK** | ~4 | disk/available_space_candlepin → general volume usage, backup/certs_tar_exist, restore/validate_backup, restore/validate_postgresql_dump_permissions |
 | **DOWNSTREAM ONLY** | ~8 | check_subscription_manager_release, system_registration, iop_*/db_up (×5), repositories/* (×3), non_rh_packages |
-| **DROP** | ~8 | disk/postgresql_mountpoint, check_hotfix_installed, validate_dnf_config, puppet checks (×2), TFTP, DHCP, foreman_openscap (until supported) |
+| **DROP** | ~3 | disk/postgresql_mountpoint, check_hotfix_installed, validate_dnf_config |
 | **ALREADY EXISTS** | ~4 | check_tuning_requirements, check_database_connection, check_hostname, certificate_checks |
 | **NEW** | ~7 | container_health, container_image_versions, podman_storage, volume_permissions, systemd_target_status, secrets_exist, recurring_timers |
