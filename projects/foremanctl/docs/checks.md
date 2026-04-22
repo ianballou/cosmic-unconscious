@@ -121,8 +121,8 @@ In foremanctl's containerized model:
 **Decision**: foremanctl already has `check_system_requirements` doing exactly this with the same tuning profiles. Already covered.
 
 ### server_ping — KEEP
-**What it does**: Calls `/api/v2/ping` to verify all services are responding.
-**Decision**: foremanctl already does this during deploy (waits for `/api/v2/ping` to return 200 and checks katello foreman_tasks status). Should be extracted into a reusable health check role.
+**What it does**: Calls `/api/v2/ping` to verify all backend services (candlepin, pulp, foreman_tasks, etc.) are healthy — not just running, but actually working end-to-end.
+**Decision**: Keep as a standalone health check role. The deploy playbook already has this logic inline (waits for `/api/v2/ping` 200 + checks foreman_tasks status). Extract that into a reusable role that both `deploy` and `checks` can include.
 
 ### services_up — KEEP (rethink implementation)
 **What it does**: Checks all managed systemd services are running.
