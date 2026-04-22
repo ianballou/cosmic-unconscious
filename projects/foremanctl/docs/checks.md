@@ -72,9 +72,9 @@ In foremanctl's containerized model:
 **What it does**: Runs `fio` benchmarks, warns if <60 MB/sec.
 **Decision**: Disk I/O affects containerized services equally. Paths need updating: check `/var/lib/pgsql/data` (PostgreSQL volume) and `/var/lib/pulp` (Pulp volume).
 
-### disk/postgresql_mountpoint — DROP
-**What it does**: Checks /var/lib/pgsql/data is same device as /var/lib/pgsql.
-**Decision**: This checked for PostgreSQL RPM upgrade breakage from split mountpoints. PostgreSQL runs in a container now — the volume is a bind mount. This specific failure mode doesn't apply.
+### disk/postgresql_mountpoint — RETHINK
+**What it does**: Checks /var/lib/pgsql/data is on the same device as /var/lib/pgsql.
+**Decision**: The original concern was RPM upgrade scriptlet breakage, but the underlying issue may persist — PostgreSQL data still lives at `/var/lib/pgsql/data` (bind-mounted into the container) and needs migration on major PG version upgrades. Migration tools (e.g., `pg_upgrade`) may need temporary space on the same filesystem. Need to investigate how foremanctl handles PG major version upgrades before deciding.
 
 ---
 
@@ -296,8 +296,8 @@ Check that systemd timers for recurring Foreman tasks (hourly, daily, weekly, mo
 | Decision | Count | Checks |
 |----------|-------|--------|
 | **KEEP** | ~28 | check_tmout, env_proxy, check_ipv6_disable, disk/available_space, disk/performance, db_up (×3), db_index (×3), validate_external_db_version, check_external_db_evr_permissions, facts_names, check_corrupted_roles, check_duplicate_permissions, server_ping, services_up, foreman_tasks (×5), pulpcore/no_running_tasks, check_sha1_ca, container/podman_login, restore/validate_hostname, restore/validate_interfaces, foreman_openscap, check_tftp_storage, verify_dhcp_config, puppet checks (×2 BYOP conditional) |
-| **RETHINK** | ~4 | disk/available_space_candlepin → general volume usage, backup/certs_tar_exist, restore/validate_backup, restore/validate_postgresql_dump_permissions |
+| **RETHINK** | ~5 | disk/postgresql_mountpoint, disk/available_space_candlepin → general volume usage, backup/certs_tar_exist, restore/validate_backup, restore/validate_postgresql_dump_permissions |
 | **DOWNSTREAM ONLY** | ~8 | check_subscription_manager_release, system_registration, iop_*/db_up (×5), repositories/* (×3), non_rh_packages |
-| **DROP** | ~3 | disk/postgresql_mountpoint, check_hotfix_installed, validate_dnf_config |
+| **DROP** | ~2 | check_hotfix_installed, validate_dnf_config |
 | **ALREADY EXISTS** | ~4 | check_tuning_requirements, check_database_connection, check_hostname, certificate_checks |
 | **NEW** | ~7 | container_health, container_image_versions, podman_storage, volume_permissions, systemd_target_status, secrets_exist, recurring_timers |
