@@ -165,9 +165,9 @@ In foremanctl's containerized model:
 
 ## Certificate Checks
 
-### check_sha1_certificate_authority — KEEP (partially exists)
-**What it does**: Checks if server CA cert is SHA-1 signed.
-**Decision**: Certificate issues are deployment-model independent. foremanctl already has `certificate_checks` role with `foreman-certificate-check` script. Verify SHA-1 detection is covered or add it.
+### check_sha1_certificate_authority — RETHINK
+**What it does**: Reads the server CA certificate chain and checks if any cert is signed with SHA-1 (`sha1WithRSAEncryption`). SHA-1 CAs broke on upgrade because newer OpenSSL rejects them.
+**Decision**: Likely unnecessary — containerized Foreman requires RHEL 9+ where SHA-1 is already restricted, so users should have already migrated to non-SHA-1 CAs to be functional. However, edge cases with custom CA chains may exist. foremanctl already has a `certificate_checks` role — verify whether it covers this. Low priority.
 
 ---
 
