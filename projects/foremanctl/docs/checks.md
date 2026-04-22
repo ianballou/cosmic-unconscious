@@ -32,9 +32,9 @@ In foremanctl's containerized model:
 
 ## System / Environment Checks
 
-### root_user — RETHINK
+### root_user — DROP
 **What it does**: Asserts running as root.
-**Decision**: Ansible handles privilege escalation via `become`. foremanctl/obsah likely already needs root. Low value as a standalone check — could be a preflight assertion in the `checks` playbook itself rather than a dedicated role.
+**Decision**: Ansible handles privilege escalation via `become`. foremanctl/obsah already needs root. Add back if a specific need arises.
 
 ### check_tmout — KEEP
 **What it does**: Checks if `TMOUT` shell env var is set, which can kill long-running operations.
