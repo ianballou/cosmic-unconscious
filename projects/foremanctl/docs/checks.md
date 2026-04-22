@@ -259,7 +259,8 @@ In foremanctl's containerized model:
 
 ### maintenance_mode/check_consistency — KEEP (if maintenance mode stays)
 **What it does**: Verifies all maintenance mode components are in consistent state.
-**Decision**: Depends on maintenance-mode command decision (pending team discussion). Note: foremanctl uses systemd timers instead of crond, so the implementation changes.
+**Decision**: Depends on maintenance-mode command decision (pending team discussion). Note: foremanctl uses systemd timers (`foreman-recurring@{hourly,daily,weekly,monthly}.timer`) instead of crond, so the implementation changes — stop/start those timers instead of crond.
+**Important**: These systemd timers must be stopped during upgrades regardless of whether maintenance mode as a command survives. The upgrade workflow needs to stop recurring timers before upgrading and re-enable them after.
 
 ---
 

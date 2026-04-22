@@ -13,6 +13,7 @@ For each piece of foreman-maintain functionality:
 - **Need it?** Yes
 - **Tracked?** SAT-39696
 - **Size**: Epic (already in progress)
+- **Note**: Upgrade workflow must stop recurring systemd timers (`foreman-recurring@*.timer`) before upgrading and re-enable after. These replace crond from foreman-maintain's upgrade flow.
 
 ### `update` — Minor version update orchestration
 - **Need it?** Yes
