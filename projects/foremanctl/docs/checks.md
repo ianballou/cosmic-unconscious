@@ -185,9 +185,9 @@ In foremanctl's containerized model:
 **What it does**: Validates required RHSM repos are available.
 **Decision**: Needed to update foremanctl/hammer RPMs. Keep for downstream.
 
-### check_hotfix_installed — DROP
+### check_hotfix_installed — RETHINK (blocked)
 **What it does**: Searches for HOTFIX RPMs and modified Ruby/Python/JS files in installed packages.
-**Decision**: Application code is in container images now, not in host RPMs. Hotfix RPMs don't apply to containerized services. If someone patches a container image, that's a different detection mechanism entirely.
+**Decision**: The current implementation (scanning host RPMs) doesn't apply to containerized services. However, hotfixes will likely still be delivered in some form and need to be queryable. Blocked on the general hotfix delivery design for containerized Foreman — once that's defined, this check can be reimplemented to match.
 
 ### non_rh_packages — DOWNSTREAM ONLY, reduced importance
 **What it does**: Lists non-Red Hat RPMs.
@@ -296,8 +296,8 @@ Check that systemd timers for recurring Foreman tasks (hourly, daily, weekly, mo
 | Decision | Count | Checks |
 |----------|-------|--------|
 | **KEEP** | ~28 | check_tmout, env_proxy, check_ipv6_disable, disk/available_space, disk/performance, db_up (×3), db_index (×3), validate_external_db_version, check_external_db_evr_permissions, facts_names, check_corrupted_roles, check_duplicate_permissions, server_ping, services_up, foreman_tasks (×5), pulpcore/no_running_tasks, check_sha1_ca, container/podman_login, restore/validate_hostname, restore/validate_interfaces, foreman_openscap, check_tftp_storage, verify_dhcp_config, puppet checks (×2 BYOP conditional) |
-| **RETHINK** | ~5 | disk/postgresql_mountpoint, disk/available_space_candlepin → general volume usage, backup/certs_tar_exist, restore/validate_backup, restore/validate_postgresql_dump_permissions |
+| **RETHINK** | ~6 | disk/postgresql_mountpoint, disk/available_space_candlepin → general volume usage, check_hotfix_installed (blocked on hotfix design), backup/certs_tar_exist, restore/validate_backup, restore/validate_postgresql_dump_permissions |
 | **DOWNSTREAM ONLY** | ~8 | check_subscription_manager_release, system_registration, iop_*/db_up (×5), repositories/* (×3), non_rh_packages |
-| **DROP** | ~2 | check_hotfix_installed, validate_dnf_config |
+| **DROP** | ~1 | validate_dnf_config |
 | **ALREADY EXISTS** | ~4 | check_tuning_requirements, check_database_connection, check_hostname, certificate_checks |
 | **NEW** | ~7 | container_health, container_image_versions, podman_storage, volume_permissions, systemd_target_status, secrets_exist, recurring_timers |
