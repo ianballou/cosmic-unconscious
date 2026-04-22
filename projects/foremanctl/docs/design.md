@@ -1,9 +1,20 @@
 # Foremanctl Migration Design
 
-## Status: Discovery Complete → Design Phase
+## Status: Proposal Phase
 
 ## Goal
-Migrate foreman-maintain functionality into foremanctl.
+Produce a comprehensive proposal document covering all foreman-maintain functionality:
+- **Do we still need it?** (may be obsolete in containerized world)
+- **If yes, where is it tracked?** (existing Jira ticket or needs new one)
+- **How big is it?** (Story or Epic)
+
+## Existing Efforts
+Some commands already have active work:
+- **update** — SAT-39697
+- **upgrade** — SAT-39696
+- **puppet purge** — SAT-40445
+
+This design effort focuses on everything else, with backup/restore likely being the largest areas to define. Health checks need per-check keep/drop/add evaluation.
 
 ## Architecture Summary
 

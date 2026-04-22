@@ -1,58 +1,117 @@
-# Command Decisions
+# foreman-maintain → foremanctl: Functionality Proposal
 
-What commands does foremanctl need? Starting from user needs, not from foreman-maintain's command list.
+For each piece of foreman-maintain functionality:
+1. **Do we still need it?** (Yes / No / Rethink / TBD)
+2. **Where is it tracked?** (Jira ticket or "Needs ticket")
+3. **How big is it?** (Story / Epic)
 
-## Decided: Drop
+---
 
-### `packages` — DROP
-foreman-maintain's `packages` command managed RPM locking (foreman-protector DNF plugin), install, update, lock/unlock, and check-update. This made sense when Foreman installed dozens of RPMs (Ruby, Foreman core, plugins, Pulp, Candlepin, PostgreSQL, etc.) that could break on accidental `dnf update`.
+## Commands
 
-foremanctl installs very few RPMs on the host: podman, httpd, mod_ssl, hammer-cli, python3 deps, bash-completion. The risk surface is dramatically smaller.
+### `upgrade` — Major version upgrade orchestration
+- **Need it?** Yes
+- **Tracked?** SAT-39696
+- **Size**: Epic (already in progress)
 
-**Reasoning:**
-- Package locking protected a fragile RPM ecosystem. Containers eliminate that fragility.
-- Users who need an RPM (debugging, external tools) can just use `dnf` directly — that's what dnf is for.
-- Upgrade/update workflows handle keeping the system current.
-- Installing packages via foremanctl adds complexity with no clear user value.
-- The foreman-protector DNF plugin has no purpose when there's almost nothing to protect.
+### `update` — Minor version update orchestration
+- **Need it?** Yes
+- **Tracked?** SAT-39697
+- **Size**: Epic (already in progress)
 
-## Decided: Keep
+### `health` — Health checks
+- **Need it?** Yes — checks need individual evaluation (see [checks.md](checks.md))
+- **Tracked?** Needs ticket
+- **Size**: Epic — ~25 checks carry over, ~8 need rethinking, new container-specific checks needed
 
-### `upgrade` — KEEP
-Major version upgrade orchestration. The workflow will look different in a containerized world (pull new images, migrate DBs, restart services vs RPM upgrades + installer runs), but the user need is the same: "take me from version X to version Y safely."
+### `service` — Start/stop/restart/status/enable/disable/list services
+- **Need it?** Yes — users still need service lifecycle management. Implementation shifts to systemd targets and container operations.
+- **Tracked?** Needs ticket
+- **Size**: Story — Ansible has strong systemd/service primitives, and foremanctl already uses `foreman.target`
 
-### `update` — KEEP
-Minor version update orchestration. Same reasoning as upgrade — the mechanism changes but the user need persists.
+### `backup` — Online/offline backup
+- **Need it?** Yes — fundamental pre-maintenance safety net. What to back up changes significantly: container volumes, podman secrets, DB dumps (possibly from containerized PostgreSQL), config files, certificates.
+- **Tracked?** Needs ticket
+- **Size**: Epic — foreman-maintain has ~15 backup procedures. Needs full redesign for container world: what data lives where, how to dump DBs from containers, volume snapshot vs file copy, etc.
 
-### `service` — KEEP
-Start/stop/restart/status/enable/disable services. Even with containers, users need to manage service lifecycle. The implementation shifts from systemd unit management to podman/systemd target operations, but the user intent is identical.
+### `restore` — Restore from backup
+- **Need it?** Yes — paired with backup.
+- **Tracked?** Needs ticket
+- **Size**: Epic — equally complex as backup in reverse. Must handle DB restoration into containers, config/secret restoration, service orchestration.
 
-### `backup` — KEEP
-Create a backup of the deployment. The what-to-backup changes (container volumes, DB dumps, config files, secrets vs RPM-era file paths), but "I need a backup before I do something risky" is fundamental.
+### `maintenance-mode` — Block external access during maintenance
+- **Need it?** TBD — needs team discussion. In foreman-maintain it blocks port 443 via firewall, stops cron/timers, disables sync plans. Question: is this still the right approach for containerized upgrades, or do container stop/start workflows replace it?
+- **Tracked?** Needs ticket (pending decision)
+- **Size**: Story (if kept — it's just firewall rules + service/timer management, all Ansible-native)
 
-### `restore` — KEEP
-Restore from a backup. Paired with backup — can't have one without the other.
+### `report` — Generate usage/inventory reports
+- **Need it?** Yes — useful for support cases, pre-upgrade audits, understanding what's deployed.
+- **Tracked?** Needs ticket
+- **Size**: Epic — 36 report definitions in foreman-maintain. Each report queries Foreman API or DB. Need to evaluate which reports carry over and whether the query mechanisms change.
 
-### `report` — KEEP
-Generate usage/inventory reports. Useful for support cases, pre-upgrade audits, and understanding what's deployed. The data sources may shift but the user need remains.
+### `packages` — RPM locking, install, update
+- **Need it?** No — foreman-maintain protected dozens of Foreman RPMs via foreman-protector DNF plugin. foremanctl installs very few host RPMs (podman, httpd, hammer). Users can manage these directly with dnf. Upgrade/update workflows handle keeping the system current.
+- **Tracked?** N/A
+- **Size**: N/A
 
-## Under Discussion
+### `self-upgrade` — Update the tool itself
+- **Need it?** Not yet — in foreman-maintain this updated the tool's own RPM to the latest build within the same version line (despite the misleading name). For foremanctl, this is just `dnf upgrade foremanctl`. Don't build a dedicated command unless foremanctl's self-update requires more steps than a simple RPM update.
+- **Tracked?** N/A (revisit if needed)
+- **Size**: Story (if ever needed)
 
-_(commands being evaluated)_
+### `advanced` — Run individual procedures by label/tag
+- **Need it?** Not yet — this is a dev/debug escape hatch. Since foremanctl is Ansible-based, developers can run individual roles/playbooks directly. Don't add unless someone identifies a need beyond raw Ansible calls.
+- **Tracked?** N/A (revisit if needed)
+- **Size**: Story (if ever needed)
 
-### `self-upgrade` — NOT YET
-Despite the name in foreman-maintain, this is a self-*update* — it updates the tool's own RPM to the latest build within the same version line, picking up new checks, bugfixes, and procedure changes.
+### `plugin purge-puppet` — Remove Puppet feature
+- **Need it?** Yes — the capability to remove a feature/plugin should exist.
+- **Tracked?** SAT-40445 (already in progress)
+- **Size**: Story (already in progress)
+- **Note**: Should live under feature management (e.g., `foremanctl deploy --remove-feature puppet`), not a separate `plugin` namespace.
 
-For foremanctl, this is currently just `dnf upgrade foremanctl`. Don't build a dedicated command unless foremanctl's self-update requires more steps than a simple RPM update (e.g., migrations, config changes, cache clearing). If that need arises, add it then.
+---
 
-## Not Yet Evaluated
+## Cross-cutting Concerns
 
-The following foreman-maintain commands still need evaluation:
+### Feature detection
+- **foreman-maintain**: Runtime Ruby class introspection detects what's installed (is Katello present? is Puppet installed? local or external DB?)
+- **foremanctl**: Static `features.yaml` registry + Ansible facts
+- **Need it?** Yes — checks and procedures need to know what's deployed to run conditionally
+- **Tracked?** Implicit in each command's implementation
+- **Size**: Story — Ansible facts + features.yaml should cover most cases
 
-### `health` — KEEP
-Health checks stay. The individual checks within need separate evaluation — some are irrelevant in a containerized world, some carry over, and there are likely new container-specific checks to add. See [checks.md](checks.md) for per-check evaluation.
-### `maintenance-mode` — KEEP (pending discussion)
-Blocks external access (port 443 via firewall), stops cron/timers, and disables sync plans — lets the system stay running but prevents external users and background automation from interfering during maintenance. Needs discussion with the team about whether this model still applies to containerized Foreman upgrades or if a different approach is warranted.
-### `advanced` — NOT YET
-In foreman-maintain, this lets you run individual procedures by label or tag — essentially a dev/debug escape hatch. Since foremanctl is Ansible-based, developers can already run individual roles/playbooks directly with `ansible-playbook`. Don't add this unless someone identifies a need for it beyond raw Ansible calls.
-- `plugin` — in foreman-maintain this is just a namespace containing `purge-puppet`. The capability to remove a feature/plugin should exist in foremanctl, but under a better home — likely as part of the existing feature management (e.g., `foremanctl deploy --remove-feature puppet` or similar). Don't recreate the `plugin` namespace.
+### Interactive prompts / confirmations
+- **foreman-maintain**: Has `--assumeyes`, confirmation dialogs, decision prompts via Clamp/HighLine
+- **foremanctl**: Ansible is non-interactive by default
+- **Need it?** TBD — some operations (destructive backup, restore) benefit from confirmation. Need to decide on approach: CLI flag? Ansible `pause` module? Obsah-level parameter?
+- **Tracked?** Needs ticket (design decision)
+- **Size**: Story
+
+### Error handling / rollback
+- **foreman-maintain**: Runner tracks step success/failure, offers next steps, supports whitelisting failed checks
+- **foremanctl**: Ansible has `block/rescue/always`, `--force-handlers`, and the callback plugin for output
+- **Need it?** Yes — complex workflows (upgrade, backup) need graceful failure handling
+- **Tracked?** Implicit in each Epic
+- **Size**: Part of each Epic's implementation
+
+---
+
+## Summary
+
+| Functionality | Need it? | Tracked? | Size |
+|---------------|----------|----------|------|
+| upgrade | Yes | SAT-39696 | Epic (in progress) |
+| update | Yes | SAT-39697 | Epic (in progress) |
+| health checks | Yes | Needs ticket | Epic |
+| service mgmt | Yes | Needs ticket | Story |
+| backup | Yes | Needs ticket | Epic |
+| restore | Yes | Needs ticket | Epic |
+| maintenance-mode | TBD | Needs ticket | Story |
+| report | Yes | Needs ticket | Epic |
+| packages | No | N/A | — |
+| self-upgrade | Not yet | N/A | — |
+| advanced | Not yet | N/A | — |
+| plugin/puppet purge | Yes | SAT-40445 | Story (in progress) |
+| feature detection | Yes | (implicit) | Story |
+| interactive prompts | TBD | Needs ticket | Story |
