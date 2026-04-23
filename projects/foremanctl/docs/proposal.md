@@ -37,6 +37,7 @@ All Foreman services run as podman quadlet containers managed via systemd:
 2. **Ansible-native**: Leverage Ansible's strengths -- roles, playbooks, modules, facts, handlers. foreman-maintain reimplemented many things that Ansible already handles natively (service management, package operations, file operations, DB queries).
 3. **Ansible-first, Python as escape hatch**: Write roles and playbooks using Ansible primitives. Only drop to Python (filters, modules, callback plugins) when Ansible gets too complex.
 4. **Procedural playbooks**: Use Ansible's natural procedural flow. A playbook composing roles is a scenario -- do not recreate the Ruby class hierarchy.
+5. **Follow foremanctl's existing patterns**: New checks follow the established foremanctl conventions -- each check is an Ansible role in `src/roles/check_*`, uses `ansible.builtin.assert` for pass/fail, and is registered in `src/roles/checks/tasks/main.yml`. Do not port foreman-maintain checks by translating Ruby to Ansible. Understand the intent, then implement fresh. None of the existing foremanctl checks were ported from foreman-maintain.
 
 ---
 

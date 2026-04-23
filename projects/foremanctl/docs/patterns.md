@@ -42,3 +42,4 @@
 - A foreman-maintain Procedure ≈ an Ansible role that does something (change state)
 - A foreman-maintain Feature ≈ Ansible facts + vars + the features.yaml registry
 - Don't create Python classes to mimic the Ruby class hierarchy — use Ansible's natural structure
+- Do NOT port foreman-maintain checks by translating Ruby to Ansible. Understand the intent of the check, then write a fresh Ansible role following foremanctl's existing conventions. None of the existing foremanctl checks were ported from foreman-maintain — they were all written independently.

@@ -45,6 +45,7 @@ This design effort focuses on everything else, with backup/restore likely being 
 2. **Ansible-native**: Leverage Ansible's strengths — roles, playbooks, modules, facts, handlers. foreman-maintain had to implement many things from scratch (service management, package locking, file operations, DB queries) that Ansible already has answers for. Use those answers.
 3. **Ansible-first, Python as escape hatch**: Write roles and playbooks using Ansible primitives. Only drop to Python (filters, modules, callback plugins) when the Ansible starts to feel too complex or unnatural.
 4. **Procedural playbooks**: Use Ansible's natural procedural flow rather than recreating foreman-maintain's class hierarchy (Check → Procedure → Scenario). A playbook with roles *is* a scenario.
+5. **Follow foremanctl's existing patterns**: New checks follow the established foremanctl pattern — not foreman-maintain's pattern. Each check is an Ansible role in `src/roles/check_*`, uses `ansible.builtin.assert` for pass/fail, and is registered in `src/roles/checks/tasks/main.yml`. No existing foremanctl checks were ported from foreman-maintain — they were all written from scratch as Ansible-native roles. New checks should do the same: understand the intent of the foreman-maintain check, then implement it fresh following foremanctl conventions.
 
 ## Open Questions
 - What commands does the user actually need? (Don't assume 1:1 mapping from foreman-maintain)
