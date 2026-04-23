@@ -204,20 +204,6 @@ All Foreman services run as podman quadlet containers managed via systemd:
 | root_user | Asserts running as root | Ansible handles privilege escalation via become. Add back if needed. |
 | validate_dnf_config | Checks for exclude directive in /etc/dnf/dnf.conf | Extremely low risk with so few host packages. Not worth a dedicated check. |
 
-### New Checks to Consider
-
-These do not exist in foreman-maintain but are relevant for containerized Foreman:
-
-| Check | What it would do |
-|-------|-----------------|
-| container_health | Check that all containers are healthy/running via podman or systemd service status. Container-aware replacement for services_up. |
-| container_image_versions | Verify all running containers use expected image versions. Catch drift where some containers were updated but others were not. |
-| podman_storage | Check podman storage usage and available space. Container images and layers consume disk. |
-| volume_permissions | Verify host mount points (/var/lib/pgsql/data, /var/lib/pulp, /var/lib/redis) have correct ownership and permissions. |
-| systemd_target_status | Check that foreman.target is active and all PartOf services are in expected state. |
-| secrets_exist | Verify all required podman secrets exist (DB passwords, certificates, config files). Missing secrets prevent containers from starting. |
-| recurring_timers | Check that systemd timers for recurring Foreman tasks (hourly, daily, weekly, monthly) are active and enabled. |
-
 ---
 
 ## Cross-cutting Concerns
