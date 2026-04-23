@@ -204,6 +204,12 @@ All Foreman services run as podman quadlet containers managed via systemd:
 | root_user | Asserts running as root | Ansible handles privilege escalation via become. Add back if needed. |
 | validate_dnf_config | Checks for exclude directive in /etc/dnf/dnf.conf | Extremely low risk with so few host packages. Not worth a dedicated check. |
 
+### New Checks to Consider
+
+| Check | What it would do |
+|-------|-----------------|
+| container_health | Check that all containers are healthy/running via podman or systemd service status. Container-aware replacement for services_up. |
+
 ---
 
 ## Cross-cutting Concerns
