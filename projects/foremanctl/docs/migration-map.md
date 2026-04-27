@@ -15,27 +15,27 @@
 
 | foreman-maintain Command | Description | foremanctl Status | Notes |
 |--------------------------|-------------|-------------------|-------|
-| `health check` | Run health checks | 🟡 Partial (`checks`) | foremanctl has 4 checks (features, hostname, db_connection, system_requirements). foreman-maintain has ~50 checks. |
-| `health check --label X` | Run specific check | ❌ Not yet | Need per-check selection mechanism |
-| `health list` | List available checks | ❌ Not yet | |
-| `health list-tags` | List available tags | ❌ Not yet | |
-| `service start/stop/restart` | Manage services | ❌ Not yet | foremanctl uses systemd targets (foreman.target) directly |
-| `service status` | Service status | ❌ Not yet | |
-| `service list` | List managed services | ❌ Not yet | |
-| `service enable/disable` | Enable/disable services | ❌ Not yet | |
-| `backup online/offline` | Create backup | ❌ Not yet | Complex scenario with many procedures |
-| `restore` | Restore from backup | ❌ Not yet | Complex scenario |
-| `upgrade check/run` | Pre-upgrade checks, run upgrade | ❌ Not yet | |
-| `update check/run` | Update checks, run update | ❌ Not yet | |
-| `packages lock/unlock/status` | Package version locking | ❌ Not yet | Uses foreman-protector DNF plugin |
-| `packages check-update` | Check for package updates | ❌ Not yet | |
-| `packages install/update` | Install/update packages | ❌ Not yet | |
-| `maintenance-mode start/stop/status` | Maintenance mode | ❌ Not yet | |
-| `advanced procedure run` | Run individual procedure | ❌ Not yet | |
-| `advanced procedure by-tag` | Run procedures by tag | ❌ Not yet | |
-| `plugin purge-puppet` | Remove puppet | ❌ Not yet | |
-| `self-upgrade` | Major version self-upgrade | ❌ Not yet | |
-| `report` | Generate usage report | ❌ Not yet | 36 report definitions |
+| `health check` | Run health checks | Partial (`checks`) | foremanctl has 4 checks (features, hostname, db_connection, system_requirements). foreman-maintain has ~50 checks. |
+| `health check --label X` | Run specific check | Not yet | Need per-check selection mechanism |
+| `health list` | List available checks | Not yet | |
+| `health list-tags` | List available tags | Not yet | |
+| `service start/stop/restart` | Manage services | Not yet | foremanctl uses systemd targets (foreman.target) directly |
+| `service status` | Service status | Not yet | |
+| `service list` | List managed services | Not yet | |
+| `service enable/disable` | Enable/disable services | Not yet | |
+| `backup online/offline` | Create backup | Not yet | Complex scenario with many procedures |
+| `restore` | Restore from backup | Not yet | Complex scenario |
+| `upgrade check/run` | Pre-upgrade checks, run upgrade | In progress | SAT-39696 |
+| `update check/run` | Update checks, run update | In progress | SAT-39697 |
+| `packages lock/unlock/status` | Package version locking | Drop | Very few host RPMs in containerized model |
+| `packages check-update` | Check for package updates | Drop | |
+| `packages install/update` | Install/update packages | Drop | |
+| `maintenance-mode start/stop/status` | Maintenance mode | Not yet | Blocks port 443, stops timers, disables sync plans |
+| `advanced procedure run` | Run individual procedure | Drop | Developers can run Ansible roles/playbooks directly |
+| `advanced procedure by-tag` | Run procedures by tag | Drop | |
+| `plugin purge-puppet` | Remove puppet | In progress | SAT-40445, reworked under feature management |
+| `self-upgrade` | Major version self-upgrade | Drop | Just `dnf upgrade foremanctl` |
+| `report` | Generate usage report | Not yet | 36 report definitions |
 
 ## foreman-maintain Feature Inventory (definitions/features/)
 
@@ -89,7 +89,7 @@ These are service/component abstractions used by checks and procedures:
 | foreman_openscap | invalid_report_associations | 1 |
 | foreman_proxy | check_tftp_storage, verify_dhcp_config_syntax | 2 |
 | foreman_tasks | invalid/check_old, invalid/check_pending_state, invalid/check_planning_state, not_paused, not_running | 5 |
-| iop_* | db_up (×5) | 5 |
+| iop_* | db_up (x5) | 5 |
 | maintenance_mode | check_consistency | 1 |
 | package_manager | dnf/validate_dnf_config | 1 |
 | pulpcore | db_index, db_up, no_running_tasks | 3 |
@@ -107,8 +107,8 @@ These are service/component abstractions used by checks and procedures:
 | check_hostname | Validates hostname configuration |
 | check_database_connection | Tests database connectivity |
 | check_system_requirements | System prereqs (CPU, memory, etc.) |
-| check_subuid_subgid | Container user namespace setup (exists but not wired into checks playbook) |
-| certificate_checks | Certificate validation (exists but not wired into checks playbook) |
+| check_subuid_subgid | Container user namespace setup (role exists but is not used) |
+| certificate_checks | Certificate validation (runs during deploy, not in checks playbook) |
 
 ## Scenarios (complex workflows)
 
@@ -119,11 +119,11 @@ These are service/component abstractions used by checks and procedures:
 | foreman_upgrade | HIGH | Pre-checks, package updates, installer run, post-checks |
 | satellite_upgrade | HIGH | Similar to foreman_upgrade + satellite-specific |
 | update | MEDIUM | Check + package update + installer |
-| self_upgrade | MEDIUM | Major version upgrade of foreman-maintain itself |
+| self_upgrade | DROP | Just `dnf upgrade foremanctl` |
 | services | LOW | Start/stop/restart/status/enable/disable/list |
 | maintenance_mode | LOW | Enable/disable/status |
-| packages | MEDIUM | Lock/unlock/install/update with protector plugin |
-| puppet | LOW | Purge puppet data |
+| packages | DROP | Very few host RPMs in containerized model |
+| puppet | Reworked | Under feature management (SAT-40445) |
 | report | MEDIUM | 36 report generators |
 
 ## Priority Recommendation
@@ -134,10 +134,8 @@ These are service/component abstractions used by checks and procedures:
 
 ### Phase 2: Medium Complexity
 3. **Maintenance mode** — enable/disable/status
-4. **Package management** — lock/unlock/status
-5. **Report generation** — usage reports
+4. **Report generation** — usage reports
 
 ### Phase 3: High Complexity
-6. **Backup** — online/offline backup workflows
-7. **Restore** — restore from backup
-8. **Upgrade/Update** — upgrade orchestration
+5. **Backup** — online/offline backup workflows
+6. **Restore** — restore from backup (part of backup epic)

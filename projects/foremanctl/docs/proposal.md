@@ -55,33 +55,34 @@ All Foreman services run as podman quadlet containers managed via systemd:
 
 | Command | Tracked | Size | Notes |
 |---------|---------|------|-------|
-| upgrade | SAT-39696 | Epic (in progress) | Upgrade workflow must stop recurring systemd timers (`foreman-recurring@*.timer`) before upgrading and re-enable after. These replace crond from foreman-maintain's upgrade flow. |
-| update | SAT-39697 | Epic (in progress) | |
-| health | Needs ticket | Epic | Individual checks need per-check evaluation. See Checks section below. |
-| service | Needs ticket | Story | Users still need service lifecycle management. Implementation shifts to systemd targets and container operations. Ansible has strong systemd/service primitives. |
-| backup | Needs ticket | Epic | What to back up changes significantly: container volumes, podman secrets, DB dumps from containerized PostgreSQL, config files, certificates. Largest untracked work area. |
-| restore | Needs ticket | Epic | Equally complex as backup in reverse. Must handle DB restoration into containers, config/secret restoration, service orchestration. |
+| upgrade | SAT-39696 | Epic (in progress) | In progress. |
+| update | SAT-39697 | Epic (in progress) | In progress. |
+| health | Needs ticket | Story within a small Epic combined with service | New `foremanctl health` command for runtime health checks. |
+| service | Needs ticket | Story within a small Epic combined with health | Start/stop/restart/status/enable/disable/list. Shifts to systemd targets + container operations. Ansible has strong systemd primitives. |
+| backup | Needs ticket | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
+| restore | Needs ticket | Epic (combined with backup) | To be implemented in the backup epic. |
 | report | Needs ticket | Epic | 36 report definitions in foreman-maintain. Each queries Foreman API or DB. Need to evaluate which carry over. |
-| maintenance-mode | Needs ticket (pending decision) | Story | Blocks external access (port 443 via firewall), stops timers, disables sync plans. Needs team discussion on whether this model applies to containerized upgrades. Implementation changes: systemd timers replace crond. |
+| maintenance-mode | Needs ticket | Story (within upgrade Epic) | Blocks port 443, stops timers, disables sync plans. |
 
 ### Commands to Drop
 
 | Command | Rationale |
 |---------|-----------|
-| packages | foreman-maintain protected dozens of RPMs via foreman-protector DNF plugin. foremanctl installs very few host RPMs. Users can manage these directly with dnf. Upgrade/update workflows handle keeping the system current. |
-
-### Commands Deferred
-
-| Command | Rationale |
-|---------|-----------|
-| self-upgrade | Despite the name, this is a self-update -- it updates the tool's own RPM to the latest build within the same version line, not a major version jump. For foremanctl this is just `dnf upgrade foremanctl`. Do not build a dedicated command unless foremanctl's self-update requires more steps than a simple RPM update. |
-| advanced | Dev/debug escape hatch to run individual procedures by label/tag. Since foremanctl is Ansible-based, developers can run individual roles/playbooks directly. Do not add unless someone identifies a need beyond raw Ansible calls. |
+| packages | Very few host RPMs in containerized model. Can users just manage RPMs with dnf? Or do we still need gating with dnf filtering? |
+| self-upgrade | For foremanctl this is just `dnf upgrade foremanctl`. Does this need a separate command? |
+| advanced | Developers can run Ansible roles/playbooks directly. Don't build unless a need (e.g. support?) is identified. |
 
 ### Commands Reworked
 
 | Command | Rationale |
 |---------|-----------|
-| plugin (purge-puppet) | SAT-40445 (in progress). The capability to remove a feature/plugin should exist but under feature management (e.g., `foremanctl deploy --remove-feature puppet`), not a separate `plugin` namespace. |
+| plugin (purge-puppet) | SAT-40445. Rework is in-progress. `plugin` can likely go away, but removing Puppet is to-be-determined. Story (within the Puppet epic). |
+
+---
+
+## Orchestration
+
+foreman-maintain scenarios run a number of tasks sequentially. If one task is failing, users have the ability to skip it via `--whitelist`. With foremanctl, this functionality may be missed. If it is, we can consider implementing skips via Ansible `--skip-tags`.
 
 ---
 
@@ -95,8 +96,8 @@ All Foreman services run as podman quadlet containers managed via systemd:
 | check_hostname | Validates FQDN: not localhost, has dot, no underscores, lowercase |
 | check_database_connection | Pings Foreman/Candlepin/Pulp databases (external DB mode only) |
 | check_system_requirements | Validates CPU/RAM against tuning profile thresholds |
-| check_subuid_subgid | Validates /etc/subuid and /etc/subgid entries for container user namespaces (exists but not wired into checks playbook) |
-| certificate_checks | Validates certificate/key/CA using foreman-certificate-check script (runs during deploy, not in checks playbook) |
+| check_subuid_subgid | Validates /etc/subuid and /etc/subgid entries for container user namespaces (role exists but is not used) |
+| certificate_checks | Validates certificate/key/CA using foreman-certificate-check script (runs during deploy, not in checks playbook). Centralize to checks playbook? |
 
 ### Checks to Keep
 
@@ -113,7 +114,7 @@ All Foreman services run as podman quadlet containers managed via systemd:
 | Check | What it does | Notes |
 |-------|-------------|-------|
 | disk/available_space | Asserts root partition has at least 4GB free | Containers need disk space for images, volumes, operations |
-| disk/performance | Runs fio benchmarks, warns if read speed below 60 MB/sec | Paths need updating to volume mount points (/var/lib/pgsql/data, /var/lib/pulp) |
+| disk/performance | Runs fio benchmarks, warns if read speed below 60 MB/sec | Run fio benchmarks on Pulp and Foreman DB data |
 
 #### Database
 
@@ -126,15 +127,12 @@ All Foreman services run as podman quadlet containers managed via systemd:
 | candlepin/db_index | Runs PostgreSQL amcheck on Candlepin DB indexes | Same |
 | pulpcore/db_index | Runs PostgreSQL amcheck on Pulpcore DB indexes | Same |
 | validate_external_db_version | Checks external PostgreSQL is at least version 13 | foremanctl supports external databases |
-| check_external_db_evr_permissions | Checks evr extension ownership in external DB | External DB + Katello only |
 
 #### Foreman Application
 
 | Check | What it does | Notes |
 |-------|-------------|-------|
 | foreman/facts_names | Warns if any host has more than 10,000 fact values | DB query, deployment-model independent |
-| foreman/check_corrupted_roles | Finds filters with permissions spanning multiple resource types | DB query |
-| foreman/check_duplicate_permissions | Finds duplicate permission entries | DB query |
 | server_ping | Calls /api/v2/ping to verify all backend services are healthy end-to-end | foremanctl deploy already has this logic inline. Extract into a reusable role that both deploy and checks can include. |
 | services_up | Checks all managed services are running | Rethink for containers: check systemd service status for all quadlet containers and foreman.target |
 
@@ -159,17 +157,10 @@ All Foreman services run as podman quadlet containers managed via systemd:
 
 | Check | What it does | Notes |
 |-------|-------------|-------|
-| foreman_openscap/invalid_report_associations | Finds OpenSCAP reports with broken associations | OpenSCAP is a supported plugin. DB query. |
 | foreman_proxy/check_tftp_storage | Cleans old kernel/initramfs files from TFTP boot dir | TFTP is a major provisioning component. Implementation may change depending on host vs container. |
 | foreman_proxy/verify_dhcp_config_syntax | Validates ISC DHCP config syntax | DHCP is a major provisioning component. Implementation depends on config location. |
 | puppet/verify_no_empty_cacert_requests | Checks for empty Puppet CA cert request files | Puppet is BYOP (Bring Your Own Puppet). Conditional on puppet integration being detected. |
 | foreman/check_puppet_capsules | Finds Smart Proxies with Puppet feature | BYOP. Conditional on puppet integration. |
-
-#### Maintenance Mode
-
-| Check | What it does | Notes |
-|-------|-------------|-------|
-| maintenance_mode/check_consistency | Verifies all maintenance mode components are in consistent state | Depends on maintenance-mode command decision. foremanctl uses systemd timers instead of crond. Important: timers must be stopped during upgrades regardless of whether maintenance mode as a command survives. |
 
 #### Backup / Restore
 
@@ -178,33 +169,32 @@ All Foreman services run as podman quadlet containers managed via systemd:
 | restore/validate_hostname | Checks backup hostname matches current system | Deployment-model independent |
 | restore/validate_interfaces | Checks network interfaces match backup expectations | Deployment-model independent |
 
-### Downstream-only Checks (Satellite)
+### Checks to Keep (Satellite only)
 
 | Check | What it does | Notes |
 |-------|-------------|-------|
 | check_subscription_manager_release | Checks if RHSM release is pinned to a minor version | Host OS version matters even for container deployments |
 | system_registration | Checks if system is self-registered to its own Satellite | Still a problematic configuration |
-| iop_advisor/db_up | Pings IoP Advisor database | Should be parameterized as one check role, not 5 copies |
-| iop_inventory/db_up | Pings IoP Inventory database | Same |
-| iop_remediations/db_up | Pings IoP Remediations database | Same |
-| iop_vmaas/db_up | Pings IoP Vmaas database | Same |
-| iop_vulnerability/db_up | Pings IoP Vulnerability database | Same |
-| repositories/check_non_rh_repository | Checks if EPEL or non-RH repos are enabled | Reduced importance with fewer host RPMs |
-| repositories/check_upstream_repository | Checks if upstream Foreman repos are enabled on Satellite | Would cause version conflicts |
-| repositories/validate | Validates required RHSM repos are available | Needed to update foremanctl/hammer RPMs |
+| iop_*/db_up (x5) | Pings IoP databases (Advisor, Inventory, Remediations, Vmaas, Vulnerability) | Should be parameterized as one check role, not 5 copies |
 | non_rh_packages | Lists non-Red Hat RPMs | Reduced importance with fewer host RPMs |
 
 ### Checks to Rethink
 
 | Check | What it does | Blocker / Question |
 |-------|-------------|-------------------|
-| disk/available_space_candlepin | Checks /var/lib/candlepin usage below 90% | No /var/lib/candlepin on host in containerized model. Candlepin data lives in PostgreSQL. Consolidate into a general "check volume mount disk usage" check covering /var/lib/pgsql/data, /var/lib/pulp, /var/lib/redis. |
-| disk/postgresql_mountpoint | Checks /var/lib/pgsql/data is on same device as /var/lib/pgsql | May still matter for PG major version upgrades. Need to investigate how foremanctl handles PG major version migration before deciding. |
-| check_hotfix_installed | Searches for HOTFIX RPMs and modified files in installed packages | Current implementation (scanning host RPMs) does not apply to containers. However, hotfixes will likely still be delivered in some form. Blocked on the general hotfix delivery design for containerized Foreman. |
-| check_sha1_certificate_authority | Checks if server CA cert chain contains SHA-1 signatures | Likely unnecessary -- containerized Foreman requires RHEL 9+ where SHA-1 is already restricted. Users should have already migrated. Edge cases with custom CA chains may exist. Low priority. |
+| disk/available_space_candlepin | Checks /var/lib/candlepin usage below 90% | No /var/lib/candlepin on host in containerized model. Mount CP data to /var/lib? |
+| disk/postgresql_mountpoint | Checks /var/lib/pgsql/data is on same device as /var/lib/pgsql | /var/lib/pgsql/data seems to be outside of the container, where /var/lib/pgsql/16/ is only within the container. |
+| foreman/check_corrupted_roles | Finds filters with permissions spanning multiple resource types | Is this check still necessary? |
+| foreman/check_duplicate_permissions | Finds duplicate permission entries | Is this check still necessary? |
+| foreman_openscap/invalid_report_associations | Finds OpenSCAP reports with broken associations | OpenSCAP is a supported plugin. DB query. Is this still necessary? |
+| maintenance_mode/check_consistency | Verifies all maintenance mode components are in consistent state | Depends on maintenance-mode command design. foremanctl uses systemd timers instead of crond. |
+| check_hotfix_installed | Searches for HOTFIX RPMs and modified files in installed packages | Current implementation (scanning host RPMs) does not apply to containers. Blocked on the general hotfix delivery design for containerized Foreman. |
 | backup/certs_tar_exist | Validates required certs tar exists before backup | Certificate storage changes with containers (podman secrets). Part of backup Epic design. |
 | restore/validate_backup | Validates backup directory contains required files | Backup format will be different for containers. Part of restore Epic design. |
 | restore/validate_postgresql_dump_permissions | Checks postgres user can read dump files | DB restoration may work differently with containerized PostgreSQL. Permission model changes. |
+| repositories/check_non_rh_repository (Satellite) | Checks if EPEL or non-RH repos are enabled | Should we continue being strict about RPM repos? |
+| repositories/check_upstream_repository (Satellite) | Checks if upstream Foreman repos are enabled on Satellite | Would cause version conflicts. |
+| repositories/validate | Validates required RHSM repos are available | Useful for foremanctl/hammer RPM updates. Make this work for upstream and Satellite? |
 
 ### Checks to Drop
 
@@ -212,12 +202,14 @@ All Foreman services run as podman quadlet containers managed via systemd:
 |-------|-------------|-----------|
 | root_user | Asserts running as root | Ansible handles privilege escalation via become. Add back if needed. |
 | validate_dnf_config | Checks for exclude directive in /etc/dnf/dnf.conf | Extremely low risk with so few host packages. Not worth a dedicated check. |
+| check_sha1_certificate_authority | Checks if server CA cert chain contains SHA-1 signatures | sha1 should likely no longer exist in certificates after the upgrade to RHEL 9. |
+| check_external_db_evr_permissions | Checks evr extension ownership in external DB | Was only needed during a past upgrade. |
 
-### New Checks to Consider
+### New Checks
 
 | Check | What it would do |
 |-------|-----------------|
-| container_health | Check that all containers are healthy/running via podman or systemd service status. Container-aware replacement for services_up. |
+| recurring_timers | Check that systemd timers for recurring Foreman tasks (hourly, daily, weekly, monthly) are active and enabled. |
 
 ---
 
@@ -239,7 +231,7 @@ foreman-maintain's runner tracks step success/failure, offers next steps, and su
 
 ## Ticket Proposals
 
-High-level goals and design sketches for each work item that needs a ticket. These are starting points — each will need detailed design before implementation.
+High-level goals and design sketches for each work item that needs a ticket. These are starting points -- each will need detailed design before implementation.
 
 ### Checks: Per-feature Conditional Execution
 
@@ -249,13 +241,13 @@ High-level goals and design sketches for each work item that needs a ticket. The
 
 **What foreman-maintain does**: Each check declares `for_feature :foo` or `confine do feature(:bar) end` in its metadata. At runtime, the framework introspects which features are present and skips checks whose feature requirements are not met. About half of all checks (~25 of ~53) are conditional on a feature being present.
 
-**Proposal**: Each check role gates itself with `when:` conditions on persisted configuration. No framework changes needed — the existing `execute_check.yml` block/rescue wrapper handles skipped roles as passing checks. Three gating axes, all derived from persisted foremanctl config:
+**Proposal**: Each check role gates itself with `when:` conditions on persisted configuration. No framework changes needed -- the existing `execute_check.yml` block/rescue wrapper handles skipped roles as passing checks. Three gating axes, all derived from persisted foremanctl config:
 
 | Axis | Variable | Example condition | Example checks |
 |------|----------|-------------------|----------------|
 | **Feature** | `enabled_features` | `'katello' in enabled_features` | Katello DB checks, OpenSCAP, sync plans, puppet |
 | **Flavor** | `flavor` | `flavor == 'satellite'` | CDN registration, RHSM release pin, non-RH repos, IoP DB checks |
-| **Infrastructure** | `database_mode` | `database_mode == 'external'` | External DB version, EVR permissions |
+| **Infrastructure** | `database_mode` | `database_mode == 'external'` | External DB version |
 
 This pattern already exists in foremanctl today: `check_database_connection` uses `when: database_mode == 'external'`.
 
@@ -267,22 +259,22 @@ This pattern already exists in foremanctl today: `check_database_connection` use
 
 **Goal**: Give users a `foremanctl health` command that checks whether a running Foreman installation is healthy. This is distinct from the existing `foremanctl checks` command, which runs install/deploy preflight validation.
 
-**The problem today**: foremanctl has a single `checks` playbook described as "Run preflight checks before installing Foreman." It validates prerequisites *before* deployment — hostname, system requirements, DB connectivity, feature validity. There is no command to check the health of an already-running system (are services up? are tasks stuck? is disk filling up?).
+**The problem today**: foremanctl has a single `checks` playbook described as "Run preflight checks before installing Foreman." It validates prerequisites *before* deployment -- hostname, system requirements, DB connectivity, feature validity. There is no command to check the health of an already-running system (are services up? are tasks stuck? is disk filling up?).
 
-foreman-maintain conflates these — `health check` runs checks tagged `:default`, while upgrade/backup scenarios pull in checks tagged `:pre_upgrade` or `:backup`. foremanctl should not replicate this tagging system.
+foreman-maintain conflates these -- `health check` runs checks tagged `:default`, while upgrade/backup scenarios pull in checks tagged `:pre_upgrade` or `:backup`. foremanctl should not replicate this tagging system.
 
-**Proposal**: A new `foremanctl health` playbook at `src/playbooks/health/health.yaml` that runs health-specific check roles against a running system. The key design decision: **each playbook explicitly lists the check roles it needs**. Check roles are reusable building blocks — the same role can appear in multiple playbooks. The playbook IS the scenario.
+**Proposal**: A new `foremanctl health` playbook at `src/playbooks/health/health.yaml` that runs health-specific check roles against a running system. The key design decision: **each playbook explicitly lists the check roles it needs**. Check roles are reusable building blocks -- the same role can appear in multiple playbooks. The playbook IS the scenario.
 
 Separation of concerns:
 
 | Playbook | Purpose | Example checks |
 |----------|---------|----------------|
 | `checks` (existing) | Install/deploy preflight | `check_hostname`, `check_features`, `check_system_requirements`, `check_database_connection` |
-| `health` (new) | Runtime health of a running system | `check_server_ping`, `check_services_up`, `check_container_health`, `check_disk_space`, `check_facts_names`, `check_corrupted_roles`, `check_env_proxy` |
+| `health` (new) | Runtime health of a running system | `check_server_ping`, `check_services_up`, `check_disk_space`, `check_facts_names`, `check_env_proxy`, `check_recurring_timers` |
 | `upgrade` (in progress) | Pre-upgrade validation, inline | `check_no_running_tasks`, `check_disk_space`, `check_tmout`, `check_db_index` |
 | `backup` (future) | Pre-backup validation, inline | `check_no_running_tasks`, `check_db_index` |
 
-The health playbook reuses the same `execute_check.yml` block/rescue pattern from the existing checks role, and loads the same vars files (including `flavors/{{ flavor }}.yml` for feature/flavor gating). Its `metadata.obsah.yaml` needs no special parameters — it runs all applicable health checks, gated by `when:` conditions on each role.
+The health playbook reuses the same `execute_check.yml` block/rescue pattern from the existing checks role, and loads the same vars files (including `flavors/{{ flavor }}.yml` for feature/flavor gating). Its `metadata.obsah.yaml` needs no special parameters -- it runs all applicable health checks, gated by `when:` conditions on each role.
 
 No tagging system. No check registry. Each playbook owns its check list.
 
@@ -290,22 +282,22 @@ No tagging system. No check registry. Each playbook owns its check list.
 
 - [ ] Idea verified
 
-**Goal**: Implement the ~28 checks identified as "keep" in the Checks section above, plus the ~7 new container-specific checks. foremanctl currently has 4 active checks; this work brings it to feature parity with foreman-maintain's health check coverage.
+**Goal**: Implement the checks identified as "keep" in the Checks section above, plus the new container-specific checks. foremanctl currently has 4 active checks; this work brings it to feature parity with foreman-maintain's health check coverage.
 
-**What foremanctl has today**: 4 checks wired into the checks playbook (`check_features`, `check_hostname`, `check_database_connection`, `check_system_requirements`), plus 2 unwired roles (`check_subuid_subgid`, `certificate_checks`).
+**What foremanctl has today**: 4 checks wired into the checks playbook (`check_features`, `check_hostname`, `check_database_connection`, `check_system_requirements`), plus 2 existing but unused roles (`check_subuid_subgid`, `certificate_checks`).
 
 **Proposal**: Group the checks into implementation batches by category and dependency. Each check is a new Ansible role in `src/roles/check_<name>/` following the existing pattern (`ansible.builtin.assert` or `ansible.builtin.fail` for pass/fail, registered in `src/roles/checks/tasks/main.yml`). Suggested batches:
 
-1. **System/environment** (3 checks: `check_tmout`, `check_env_proxy`, `check_ipv6_disable`) — simple asserts on env vars and `/proc/cmdline`. No external dependencies.
-2. **Disk** (2 checks: `check_disk_space`, `check_disk_performance`) — `ansible.builtin.assert` on `ansible_mounts` facts for space; shell task running `fio` for performance. Paths target `/var/lib/pgsql/data`, `/var/lib/pulp`.
-3. **Database** (extend existing + 3 new: extend `check_database_connection` to local DB, `check_db_index` parameterized across 3 DBs, `check_external_db_version`, `check_external_db_evr_permissions`) — use `community.postgresql` Ansible modules. The index check can use `amcheck` via `podman exec` for local DB or direct SQL for external.
-4. **Application** (5 checks: `check_facts_names`, `check_corrupted_roles`, `check_duplicate_permissions`, `check_server_ping`, `check_services_up`) — DB queries via `community.postgresql.postgresql_query` for the first three; `ansible.builtin.uri` to `/api/v2/ping` for server_ping (extract from deploy role into reusable role); `ansible.builtin.systemd` facts for services_up.
-5. **Tasks** (6 checks: 5 foreman_tasks checks + `check_pulpcore_no_running_tasks`) — investigate `theforeman.foreman` Ansible collection first; fall back to `ansible.builtin.uri` against Foreman/Pulp APIs or direct DB queries.
-6. **Container/registry** (1 check: `check_podman_login`) — shell task checking `podman login --get-login registry.redhat.io`.
-7. **Plugin-specific** (5 checks: openscap, tftp, dhcp, puppet x2) — conditional on features. DB queries or file system checks.
-8. **New container-specific** (7 checks: `check_container_health`, `check_container_image_versions`, `check_podman_storage`, `check_volume_permissions`, `check_systemd_target`, `check_secrets_exist`, `check_recurring_timers`) — use `podman` and `systemctl` via shell/command modules.
+1. **System/environment** (3 checks: `check_tmout`, `check_env_proxy`, `check_ipv6_disable`) -- simple asserts on env vars and `/proc/cmdline`. No external dependencies.
+2. **Disk** (2 checks: `check_disk_space`, `check_disk_performance`) -- `ansible.builtin.assert` on `ansible_mounts` facts for space; shell task running `fio` for performance. Paths target `/var/lib/pgsql/data`, `/var/lib/pulp`.
+3. **Database** (extend existing + new: extend `check_database_connection` to local DB, `check_db_index` parameterized across 3 DBs, `check_external_db_version`) -- use `community.postgresql` Ansible modules. The index check can use `amcheck` via `podman exec` for local DB or direct SQL for external.
+4. **Application** (3 checks: `check_facts_names`, `check_server_ping`, `check_services_up`) -- DB queries via `community.postgresql.postgresql_query` for facts_names; `ansible.builtin.uri` to `/api/v2/ping` for server_ping (extract from deploy role into reusable role); `ansible.builtin.systemd` facts for services_up.
+5. **Tasks** (6 checks: 5 foreman_tasks checks + `check_pulpcore_no_running_tasks`) -- investigate `theforeman.foreman` Ansible collection first; fall back to `ansible.builtin.uri` against Foreman/Pulp APIs or direct DB queries.
+6. **Container/registry** (1 check: `check_podman_login`) -- shell task checking `podman login --get-login registry.redhat.io`.
+7. **Plugin-specific** (4 checks: tftp, dhcp, puppet x2) -- conditional on features. DB queries or file system checks.
+8. **New container-specific** (1 check: `check_recurring_timers`) -- use `systemctl` via shell/command modules.
 
-Wire the 2 existing unwired checks (`check_subuid_subgid`, `certificate_checks`) into the checks playbook as part of this work.
+Wire the 2 existing unused checks (`check_subuid_subgid`, `certificate_checks`) into the checks playbook as part of this work.
 
 ### Service Management
 
@@ -317,7 +309,7 @@ Wire the 2 existing unwired checks (`check_subuid_subgid`, `certificate_checks`)
 
 **Proposal**: A new `foremanctl service` playbook at `src/playbooks/service/service.yaml` with a `metadata.obsah.yaml` defining parameters for `action` (start/stop/restart/status/enable/disable/list), `--only`, and `--exclude`. The playbook includes a `service_management` role that:
 
-- Defines the full service list as an Ansible variable (all quadlet container service names + `foreman.target` + recurring timers). This is static and derived from the deployment — not runtime-discovered like foreman-maintain.
+- Defines the full service list as an Ansible variable (all quadlet container service names + `foreman.target` + recurring timers). This is static and derived from the deployment -- not runtime-discovered like foreman-maintain.
 - For start: `systemctl start foreman.target` (pulls in all `PartOf` services). For stop: `systemctl stop foreman.target`. For restart: stop then start. Ansible's `systemd` module handles this natively.
 - For status: query `systemctl is-active` for each container service, format output via the callback plugin.
 - For list: query `systemctl list-unit-files` filtered to known Foreman services.
@@ -338,7 +330,7 @@ The key simplification: foremanctl's service list is static and known at deploy 
 
 1. **Pre-checks role**: Run DB index checks, verify no running Foreman/Pulp tasks.
 2. **Prepare directory role**: Create backup dir, set permissions.
-3. **Metadata role**: Gather and save metadata — hostname, OS version, enabled features, container image versions (new: replaces RPM list), foremanctl parameters.
+3. **Metadata role**: Gather and save metadata -- hostname, OS version, enabled features, container image versions (new: replaces RPM list), foremanctl parameters.
 4. **Config files role**: Tar relevant config paths. In containerized model this is: `/etc/foreman-proxy/`, httpd configs, certificates, podman secrets export, `parameters.yaml`, `features.yaml`. Each feature's config paths should be defined as variables.
 5. **Database dump role**: Parameterized role that loops over configured databases. For local DB: `podman exec postgresql pg_dump` or connect from host (PostgreSQL is on host networking). For external DB: direct `pg_dump` connection. Use `community.postgresql` modules where possible.
 6. **Pulp data role**: Tar `/var/lib/pulp` (bind mount on host, so directly accessible). Use Ansible's `archive` module or shell `tar`.
@@ -352,19 +344,19 @@ Key differences from foreman-maintain: no `foreman-installer` answers to back up
 
 - [ ] Idea verified
 
-**Goal**: Give users a `foremanctl restore` command to restore a Foreman installation from a backup created by `foremanctl backup`.
+**Goal**: Give users a `foremanctl restore` command to restore a Foreman installation from a backup created by `foremanctl backup`. To be implemented in the backup epic.
 
 **What foreman-maintain does**: Validates the backup (hostname match, network interfaces, required files present, PostgreSQL dump permissions), confirms with user, installs required packages, restores config files from tar, stops cron/timers, optionally resets installer state, stops all services, drops and re-creates databases, restores each DB dump, extracts Pulp data tar, runs `foreman-installer` to reconfigure, runs upgrade rake tasks, and restarts cron/timers.
 
 **Proposal**: A new `foremanctl restore` playbook with parameters: `--backup-dir`, `--dry-run` (validate only). The playbook composes roles:
 
 1. **Validation role**: Check backup directory contents (expected files exist), hostname matches current system, network interfaces match, backup metadata is readable and compatible.
-2. **Confirmation role**: If not `--assumeyes`, pause for user confirmation (Ansible `pause` module or a pre-flight prompt mechanism — ties into the interactive prompts design decision).
+2. **Confirmation role**: If not `--assumeyes`, pause for user confirmation (Ansible `pause` module or a pre-flight prompt mechanism -- ties into the interactive prompts design decision).
 3. **Stop services role**: Stop `foreman.target` and recurring timers.
 4. **Restore configs role**: Extract config files tar to `/`, restore podman secrets.
-5. **Database restore role**: Parameterized role — drop databases, restore each dump. For local DB: start postgresql container, use `pg_restore` via `podman exec` or host connection. For external DB: direct connection.
+5. **Database restore role**: Parameterized role -- drop databases, restore each dump. For local DB: start postgresql container, use `pg_restore` via `podman exec` or host connection. For external DB: direct connection.
 6. **Restore Pulp data role**: Extract Pulp data tar to `/var/lib/pulp`.
-7. **Reconfigure role**: Run `foremanctl deploy` (or a subset) to re-apply configuration — this replaces `foreman-installer` from the old flow. Ensures container definitions, systemd units, and secrets are all consistent with restored config.
+7. **Reconfigure role**: Run `foremanctl deploy` (or a subset) to re-apply configuration -- this replaces `foreman-installer` from the old flow. Ensures container definitions, systemd units, and secrets are all consistent with restored config.
 8. **Start services role**: Start `foreman.target` and recurring timers, verify via `/api/v2/ping`.
 
 Key differences from foreman-maintain: no `foreman-installer --reset`; reconfiguration is `foremanctl deploy`; database operations go through containers; no RPM package restoration needed (services are container images, not RPMs).
@@ -380,11 +372,11 @@ Key differences from foreman-maintain: no `foreman-installer --reset`; reconfigu
 **Proposal**: A new `foremanctl maintenance-mode` playbook with a parameter for `action` (start/stop/status). The playbook includes a `maintenance_mode` role that:
 
 - **Firewall**: Uses `ansible.builtin.command` to add/remove nftables rules (RHEL 9+ uses nftables by default). Block port 443 to external traffic while allowing localhost. Same `FOREMAN_MAINTAIN_TABLE` / `FOREMAN_MAINTAIN_CHAIN` pattern, or a simplified equivalent.
-- **Recurring timers**: Stop/start `foreman-recurring@{hourly,daily,weekly,monthly}.timer` via `ansible.builtin.systemd`. These replace crond from foreman-maintain — there is no crond in containerized Foreman.
-- **Sync plans**: Disable/re-enable active sync plans. foreman-maintain uses Hammer CLI (`hammer sync-plan update --enabled false`). foremanctl could do the same (Hammer is a host RPM) or use the Foreman API directly via `ansible.builtin.uri`. The tricky part is state tracking — foreman-maintain persists which sync plans it disabled to a storage file so it can re-enable only those. foremanctl should do the same, persisting to a file under `/var/lib/foremanctl/`.
+- **Recurring timers**: Stop/start `foreman-recurring@{hourly,daily,weekly,monthly}.timer` via `ansible.builtin.systemd`. These replace crond from foreman-maintain -- there is no crond in containerized Foreman.
+- **Sync plans**: Disable/re-enable active sync plans. foreman-maintain uses Hammer CLI (`hammer sync-plan update --enabled false`). foremanctl could do the same (Hammer is a host RPM) or use the Foreman API directly via `ansible.builtin.uri`. The tricky part is state tracking -- foreman-maintain persists which sync plans it disabled to a storage file so it can re-enable only those. foremanctl should do the same, persisting to a file under `/var/lib/foremanctl/`.
 - **Status**: Check all three components (firewall rules present?, timers stopped?, sync plans state file exists?) and report consistency. Use the callback plugin's `foremanctl_suppress_default_output` tag for clean output.
 
-**Open question**: Does maintenance mode as a standalone command still make sense, or should upgrade/update workflows handle this internally? Even if it becomes internal-only, the roles are reusable. The sync plan disable/enable roles are independently useful for upgrade workflows regardless.
+The sync plan disable/enable roles are independently useful for upgrade workflows regardless.
 
 ### Report Generation
 
@@ -402,26 +394,26 @@ Key differences from foreman-maintain: no `foreman-installer --reset`; reconfigu
 - Results are collected into a single dictionary variable and written to a YAML or JSON file.
 - New container-specific report fields: container image versions, podman storage usage, systemd timer status, enabled features list. These replace RPM-based fields from foreman-maintain.
 
-This is an Epic because of the sheer volume of reports (~36 definitions, ~2000 lines of Ruby). However, each report is independent, so implementation can be parallelized. Not all reports may carry over — some are downstream-only (IoP remediations) and some may be obsolete. A triage pass similar to what was done for health checks should determine the final list.
+This is an Epic because of the sheer volume of reports (~36 definitions, ~2000 lines of Ruby). However, each report is independent, so implementation can be parallelized. Not all reports may carry over -- some are downstream-only (IoP remediations) and some may be obsolete. A triage pass similar to what was done for health checks should determine the final list.
 
 ---
 
 ## Summary Table
 
-| Functionality | Need it? | Tracked | Size |
-|---------------|----------|---------|------|
-| upgrade | Yes | SAT-39696 | Epic (in progress) |
-| update | Yes | SAT-39697 | Epic (in progress) |
-| health command | Yes | Needs ticket | Story |
-| check implementations | Yes | Needs ticket | Epic |
-| service management | Yes | Needs ticket | Story |
-| backup | Yes | Needs ticket | Epic |
-| restore | Yes | Needs ticket | Epic |
-| maintenance-mode | Pending discussion | Needs ticket | Story |
-| report | Yes | Needs ticket | Epic |
-| packages | No | N/A | -- |
-| self-upgrade | Not yet | N/A | -- |
-| advanced | Not yet | N/A | -- |
-| plugin/puppet purge | Yes | SAT-40445 | Story (in progress) |
-| feature detection | Yes | Implicit | N/A - via other stories? |
-| interactive prompts | Pending decision | Needs ticket | Story |
+| Functionality | Recommendation | Tracked | Size |
+|---------------|---------------|---------|------|
+| upgrade | Keep | SAT-39696 | Epic (in progress) |
+| update | Keep | SAT-39697 | Epic (in progress) |
+| health command | Keep | Needs ticket | Story within a small Epic combined with service |
+| check implementations | Keep | Needs ticket | Story within a small Epic combined with health |
+| service management | Keep | Needs ticket | Story within a small Epic combined with health |
+| backup | Keep | Needs ticket | Epic (combined with restore) |
+| restore | Keep | Needs ticket | Epic (combined with backup) |
+| maintenance-mode | Keep | Needs ticket | Story (within upgrade Epic) |
+| report | Keep | Needs ticket | Epic |
+| packages | Drop | N/A | -- |
+| self-upgrade | Drop | N/A | -- |
+| advanced | Drop | N/A | -- |
+| plugin/puppet purge | Reworked | SAT-40445 | Story (within Puppet epic) |
+| feature detection | Keep | Implicit | N/A - via other stories? |
+| interactive prompts | TBD | Needs ticket | Story |
