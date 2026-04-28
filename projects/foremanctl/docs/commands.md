@@ -24,9 +24,9 @@ The following commands exist today in foreman-maintain. The recommendations belo
 - **Note**: New `foremanctl health` command for runtime health checks.
 
 ### `service` — Start/stop/restart/status/enable/disable/list services
-- **Need it?** Yes — users still need service lifecycle management. Implementation shifts to systemd targets and container operations.
-- **Tracked?** Needs ticket
-- **Size**: Story within a small Epic combined with health
+- **Need it?** No — with `foreman.target`, this becomes less necessary to have. Introduce only as necessary.
+- **Tracked?** N/A
+- **Size**: N/A
 
 ### `backup` — Online/offline backup
 - **Need it?** Yes — fundamental pre-maintenance safety net. What to back up may change significantly.
@@ -41,12 +41,12 @@ The following commands exist today in foreman-maintain. The recommendations belo
 ### `maintenance-mode` — Block external access during maintenance
 - **Need it?** Yes — blocks port 443 via firewall, stops timers, disables sync plans.
 - **Tracked?** Needs ticket
-- **Size**: Story (within upgrade Epic)
+- **Size**: Story (within upgrade Epic). Link as related to `update` & `backup` Epics.
 
 ### `report` — Generate usage/inventory reports
-- **Need it?** Yes — useful for support cases, pre-upgrade audits, understanding what's deployed.
+- **Need it?** Move — SatStats reporting should ideally move to another tool since it's unrelated to configuring Foreman. This way it could remain Ruby too.
 - **Tracked?** Needs ticket
-- **Size**: Epic — 36 report definitions in foreman-maintain. Each report queries Foreman API or DB. Need to evaluate which reports carry over and whether the query mechanisms change.
+- **Size**: Epic
 
 ### `packages` — RPM locking, install, update
 - **Need it?** No — very few host RPMs in containerized model. Can users just manage RPMs with dnf? Or do we still need gating with dnf filtering?
@@ -54,8 +54,8 @@ The following commands exist today in foreman-maintain. The recommendations belo
 - **Size**: N/A
 
 ### `self-upgrade` — Update the tool itself
-- **Need it?** No — for foremanctl this is just `dnf upgrade foremanctl`. Does this need a separate command?
-- **Tracked?** N/A
+- **Need it?** Rethink — enables newer maintenance repository and updates foreman-maintain today. The upgrade process will define if this is still necessary.
+- **Tracked?** Needs tracking in SAT-39696
 - **Size**: N/A
 
 ### `advanced` — Run individual procedures by label/tag
@@ -103,19 +103,19 @@ foreman-maintain scenarios run a number of tasks sequentially. If one task is fa
 
 ## Summary
 
-| Functionality | Recommendation | Tracked? | Size |
-|---------------|---------------|----------|------|
-| upgrade | Keep | SAT-39696 | Epic (in progress) |
-| update | Keep | SAT-39697 | Epic (in progress) |
-| health checks | Keep | Needs ticket | Story within a small Epic combined with service |
-| service mgmt | Keep | Needs ticket | Story within a small Epic combined with health |
-| backup | Keep | Needs ticket | Epic (combined with restore) |
-| restore | Keep | Needs ticket | Epic (combined with backup) |
-| maintenance-mode | Keep | Needs ticket | Story (within upgrade Epic) |
-| report | Keep | Needs ticket | Epic |
-| packages | Drop | N/A | -- |
-| self-upgrade | Drop | N/A | -- |
-| advanced | Drop | N/A | -- |
-| plugin/puppet purge | Reworked | SAT-40445 | Story (within Puppet epic) |
-| feature detection | Keep | (implicit) | Story |
-| interactive prompts | TBD | Needs ticket | Story |
+| Functionality | Recommendation | Tracked? | Size | Notes |
+|---------------|---------------|----------|------|-------|
+| upgrade | Keep | SAT-39696 | Epic (in progress) | In progress. |
+| update | Keep | SAT-39697 | Epic (in progress) | In progress. |
+| health | Keep | Needs ticket | Story within a small Epic combined with service | New `foremanctl health` command for runtime health checks. |
+| service | Drop | N/A | -- | With foreman.target, this becomes less necessary. Introduce only as necessary. |
+| backup | Keep | Needs ticket | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
+| restore | Keep | Needs ticket | Epic (combined with backup) | To be implemented in the backup epic. |
+| maintenance-mode | Keep | Needs ticket | Story (within upgrade Epic) | Link as related to `update` & `backup` Epics. Blocks port 443, stops timers, disables sync plans. |
+| report | Move | Needs ticket | Epic | SatStats reporting should ideally move to another tool since it's unrelated to configuring Foreman. |
+| packages | Drop | N/A | -- | Very few host RPMs in containerized model. |
+| self-upgrade | Rethink | Needs tracking in SAT-39696 | -- | Enables newer maintenance repository and updates foreman-maintain today. The upgrade process will define if this is still necessary. |
+| advanced | Drop | N/A | -- | Developers can run Ansible roles/playbooks directly. Don't build unless a need is identified. |
+| plugin/puppet purge | Reworked | SAT-40445 | Story (within Puppet epic) | Rework is in-progress. `plugin` can likely go away, but removing Puppet is TBD. |
+| feature detection | Keep | (implicit) | Story | |
+| interactive prompts | TBD | Needs ticket | Story | |

@@ -19,10 +19,10 @@
 | `health check --label X` | Run specific check | Not yet | Need per-check selection mechanism |
 | `health list` | List available checks | Not yet | |
 | `health list-tags` | List available tags | Not yet | |
-| `service start/stop/restart` | Manage services | Not yet | foremanctl uses systemd targets (foreman.target) directly |
-| `service status` | Service status | Not yet | |
-| `service list` | List managed services | Not yet | |
-| `service enable/disable` | Enable/disable services | Not yet | |
+| `service start/stop/restart` | Manage services | Drop | With foreman.target, this becomes less necessary. Introduce only as necessary. |
+| `service status` | Service status | Drop | |
+| `service list` | List managed services | Drop | |
+| `service enable/disable` | Enable/disable services | Drop | |
 | `backup online/offline` | Create backup | Not yet | Complex scenario with many procedures |
 | `restore` | Restore from backup | Not yet | Complex scenario |
 | `upgrade check/run` | Pre-upgrade checks, run upgrade | In progress | SAT-39696 |
@@ -34,8 +34,8 @@
 | `advanced procedure run` | Run individual procedure | Drop | Developers can run Ansible roles/playbooks directly |
 | `advanced procedure by-tag` | Run procedures by tag | Drop | |
 | `plugin purge-puppet` | Remove puppet | In progress | SAT-40445, reworked under feature management |
-| `self-upgrade` | Major version self-upgrade | Drop | Just `dnf upgrade foremanctl` |
-| `report` | Generate usage report | Not yet | 36 report definitions |
+| `self-upgrade` | Major version self-upgrade | Rethink | Enables newer maintenance repository and updates foreman-maintain today. Track in SAT-39696. |
+| `report` | Generate usage report | Move | SatStats reporting should move to another tool. Unrelated to configuring Foreman. |
 
 ## foreman-maintain Feature Inventory (definitions/features/)
 
@@ -119,23 +119,25 @@ These are service/component abstractions used by checks and procedures:
 | foreman_upgrade | HIGH | Pre-checks, package updates, installer run, post-checks |
 | satellite_upgrade | HIGH | Similar to foreman_upgrade + satellite-specific |
 | update | MEDIUM | Check + package update + installer |
-| self_upgrade | DROP | Just `dnf upgrade foremanctl` |
-| services | LOW | Start/stop/restart/status/enable/disable/list |
+| self_upgrade | Rethink | Track within SAT-39696. The upgrade process will define if this is still necessary. |
+| services | DROP | With foreman.target, less necessary. Introduce only as necessary. |
 | maintenance_mode | LOW | Enable/disable/status |
 | packages | DROP | Very few host RPMs in containerized model |
 | puppet | Reworked | Under feature management (SAT-40445) |
-| report | MEDIUM | 36 report generators |
+| report | Move | SatStats reporting should move to another tool. |
 
 ## Priority Recommendation
 
 ### Phase 1: Quick Wins (LOW complexity, high value)
 1. **Health checks** — Expand existing `checks` playbook with more checks from foreman-maintain
-2. **Service management** — start/stop/restart/status (foremanctl already uses systemd targets)
 
 ### Phase 2: Medium Complexity
-3. **Maintenance mode** — enable/disable/status
-4. **Report generation** — usage reports
+2. **Maintenance mode** — enable/disable/status
 
 ### Phase 3: High Complexity
-5. **Backup** — online/offline backup workflows
-6. **Restore** — restore from backup (part of backup epic)
+3. **Backup** — online/offline backup workflows
+4. **Restore** — restore from backup (part of backup epic)
+
+### Moved Out
+- **Service management** — Dropped. With foreman.target, less necessary. Introduce only as necessary.
+- **Report generation** — Move to a separate tool (SatStats). Unrelated to configuring Foreman.

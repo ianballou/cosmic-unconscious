@@ -128,6 +128,14 @@ if [ -z "$GCP_PROJECT_ID" ] || [ -z "$GCP_LOCATION" ]; then
     echo "           Re-run bootstrap.sh to set them."
 fi
 
+# Inject GCP values into config.yaml (replace commented placeholders)
+GOOSE_CONFIG=~/.config/goose/config.yaml
+if [ -n "$GCP_PROJECT_ID" ] && [ -n "$GCP_LOCATION" ]; then
+    sed -i "s/^#GCP_PROJECT_ID:.*/GCP_PROJECT_ID: \"$GCP_PROJECT_ID\"/" "$GOOSE_CONFIG"
+    sed -i "s/^#GCP_LOCATION:.*/GCP_LOCATION: \"$GCP_LOCATION\"/" "$GOOSE_CONFIG"
+    echo "  - GCP fields written to config.yaml"
+fi
+
 # --- Shell environment ---
 cat > "$GOOSE_ENV_FILE" << EOF
 export GOOSE_MOIM_MESSAGE_FILE="\$HOME/.config/goose/guardrails.md"

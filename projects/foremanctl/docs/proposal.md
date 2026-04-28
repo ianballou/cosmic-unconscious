@@ -58,19 +58,29 @@ All Foreman services run as podman quadlet containers managed via systemd:
 | upgrade | SAT-39696 | Epic (in progress) | In progress. |
 | update | SAT-39697 | Epic (in progress) | In progress. |
 | health | Needs ticket | Story within a small Epic combined with service | New `foremanctl health` command for runtime health checks. |
-| service | Needs ticket | Story within a small Epic combined with health | Start/stop/restart/status/enable/disable/list. Shifts to systemd targets + container operations. Ansible has strong systemd primitives. |
 | backup | Needs ticket | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
 | restore | Needs ticket | Epic (combined with backup) | To be implemented in the backup epic. |
-| report | Needs ticket | Epic | 36 report definitions in foreman-maintain. Each queries Foreman API or DB. Need to evaluate which carry over. |
-| maintenance-mode | Needs ticket | Story (within upgrade Epic) | Blocks port 443, stops timers, disables sync plans. |
+| maintenance-mode | Needs ticket | Story (within upgrade Epic) | Link as related to `update` & `backup` Epics. Blocks port 443, stops timers, disables sync plans. |
 
 ### Commands to Drop
 
 | Command | Rationale |
 |---------|-----------|
+| service | With foreman.target, this becomes less necessary. Introduce only as necessary. |
 | packages | Very few host RPMs in containerized model. Can users just manage RPMs with dnf? Or do we still need gating with dnf filtering? |
-| self-upgrade | For foremanctl this is just `dnf upgrade foremanctl`. Does this need a separate command? |
 | advanced | Developers can run Ansible roles/playbooks directly. Don't build unless a need (e.g. support?) is identified. |
+
+### Commands to Rethink
+
+| Command | Rationale |
+|---------|-----------|
+| self-upgrade | Enables newer maintenance repository and updates foreman-maintain today. The upgrade process will define if this is still necessary. Track in SAT-39696. |
+
+### Commands to Move
+
+| Command | Rationale |
+|---------|-----------|
+| report | SatStats reporting should ideally move to another tool since it's unrelated to configuring Foreman. This way it could remain Ruby too. |
 
 ### Commands Reworked
 
@@ -299,11 +309,11 @@ No tagging system. No check registry. Each playbook owns its check list.
 
 Wire the 2 existing unused checks (`check_subuid_subgid`, `certificate_checks`) into the checks playbook as part of this work.
 
-### Service Management
+### Service Management — DROPPED
 
-- [ ] Idea verified
+**Status**: Dropped. With `foreman.target`, this becomes less necessary. Introduce only as necessary.
 
-**Goal**: Give users a `foremanctl service` command to start, stop, restart, check status, enable, disable, and list all Foreman services. This is a frequently used operational command.
+**Original goal**: Give users a `foremanctl service` command to start, stop, restart, check status, enable, disable, and list all Foreman services. This is a frequently used operational command.
 
 **What foreman-maintain does**: The `service` command dispatches to scenarios (ServiceStart, ServiceStop, ServiceRestart, ServiceStatus, ServiceList, ServiceEnable, ServiceDisable). Each calls into the `Features::Service` class, which discovers all managed systemd services from registered features, supports `--only` and `--exclude` filters, groups services by priority for ordered start/stop, forks threads for parallel operations within a priority group, and reverses order for stop.
 
@@ -378,11 +388,11 @@ Key differences from foreman-maintain: no `foreman-installer --reset`; reconfigu
 
 The sync plan disable/enable roles are independently useful for upgrade workflows regardless.
 
-### Report Generation
+### Report Generation — MOVE TO SEPARATE TOOL
 
-- [ ] Idea verified
+**Status**: SatStats reporting should ideally move to another tool since it's unrelated to configuring Foreman. This way it could remain Ruby too.
 
-**Goal**: Give users a `foremanctl report` command that generates a usage/inventory report for support cases, pre-upgrade audits, and understanding what is deployed.
+**Original goal**: Give users a `foremanctl report` command that generates a usage/inventory report for support cases, pre-upgrade audits, and understanding what is deployed.
 
 **What foreman-maintain does**: Has 36 report definitions (Ruby classes), each collecting data via SQL queries against the Foreman database or system commands. Reports cover: platform usage (users, roles, settings, bookmarks), content metrics (repositories, RPMs, errata, content views, sync plans, activation keys), host metrics (counts, multi-CV hosts, smart proxy assignments), provisioning (compute resources, templates, PXE), smart proxy metrics, networking (IPv4/IPv6 subnets, interfaces), authentication (LDAP, Kerberos, OIDC, PATs), compliance (OpenSCAP), IoP remediations, SELinux status, virt-who, webhooks, and more. Many reports are conditional on features (e.g., Katello content reports only run if Katello is present). Output is a flat key-value data structure collected from all reports.
 
@@ -400,20 +410,20 @@ This is an Epic because of the sheer volume of reports (~36 definitions, ~2000 l
 
 ## Summary Table
 
-| Functionality | Recommendation | Tracked | Size |
-|---------------|---------------|---------|------|
-| upgrade | Keep | SAT-39696 | Epic (in progress) |
-| update | Keep | SAT-39697 | Epic (in progress) |
-| health command | Keep | Needs ticket | Story within a small Epic combined with service |
-| check implementations | Keep | Needs ticket | Story within a small Epic combined with health |
-| service management | Keep | Needs ticket | Story within a small Epic combined with health |
-| backup | Keep | Needs ticket | Epic (combined with restore) |
-| restore | Keep | Needs ticket | Epic (combined with backup) |
-| maintenance-mode | Keep | Needs ticket | Story (within upgrade Epic) |
-| report | Keep | Needs ticket | Epic |
-| packages | Drop | N/A | -- |
-| self-upgrade | Drop | N/A | -- |
-| advanced | Drop | N/A | -- |
-| plugin/puppet purge | Reworked | SAT-40445 | Story (within Puppet epic) |
-| feature detection | Keep | Implicit | N/A - via other stories? |
-| interactive prompts | TBD | Needs ticket | Story |
+| Functionality | Recommendation | Tracked | Size | Notes |
+|---------------|---------------|---------|------|-------|
+| upgrade | Keep | SAT-39696 | Epic (in progress) | In progress. |
+| update | Keep | SAT-39697 | Epic (in progress) | In progress. |
+| health command | Keep | Needs ticket | Story within a small Epic combined with service | New `foremanctl health` command for runtime health checks. |
+| check implementations | Keep | Needs ticket | Story within a small Epic combined with health | |
+| service management | Drop | N/A | -- | With foreman.target, less necessary. Introduce only as necessary. |
+| backup | Keep | Needs ticket | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
+| restore | Keep | Needs ticket | Epic (combined with backup) | To be implemented in the backup epic. |
+| maintenance-mode | Keep | Needs ticket | Story (within upgrade Epic) | Link as related to `update` & `backup` Epics. |
+| report | Move | Needs ticket | Epic | SatStats reporting should move to another tool. |
+| packages | Drop | N/A | -- | Very few host RPMs in containerized model. |
+| self-upgrade | Rethink | Needs tracking in SAT-39696 | -- | The upgrade process will define if this is still necessary. |
+| advanced | Drop | N/A | -- | Developers can run Ansible roles/playbooks directly. |
+| plugin/puppet purge | Reworked | SAT-40445 | Story (within Puppet epic) | Rework is in-progress. |
+| feature detection | Keep | Implicit | N/A - via other stories? | |
+| interactive prompts | TBD | Needs ticket | Story | |

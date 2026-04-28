@@ -44,13 +44,13 @@ In foremanctl's containerized model:
 **What it does**: Checks if HTTP_PROXY/HTTPS_PROXY env vars are set.
 **Decision**: Proxy env vars affect podman image pulls, container networking, and Ansible operations. Still relevant.
 
-### check_ipv6_disable — KEEP
+### check_ipv6_disable — NEEDS MORE DISCUSSION
 **What it does**: Checks if `ipv6.disable=1` is in kernel boot params.
-**Decision**: Kernel-level issue that affects container networking too. Simple check against `/proc/cmdline`.
+**Decision**: Kernel-level issue that affects container networking too. Check `/proc/cmdline`. See https://github.com/theforeman/foremanctl/pull/208
 
-### check_subscription_manager_release — KEEP (Satellite)
+### check_subscription_manager_release — DROP (Satellite)
 **What it does**: Checks if RHSM release is pinned to a minor version.
-**Decision**: Satellite only. RHSM release pinned to minor version. Host OS version still matters.
+**Decision**: Drop. With how few RPMs foremanctl requires, aim first for maximum flexibility.
 
 ### system_registration — KEEP (Satellite)
 **What it does**: Checks if system is self-registered to its own Satellite.
@@ -64,9 +64,9 @@ In foremanctl's containerized model:
 **What it does**: Asserts root partition has >=4GB free.
 **Decision**: Containers need disk space for images, volumes, and operations. May want to also check specific mount points where volumes live.
 
-### disk/available_space_candlepin — RETHINK
+### disk/available_space_candlepin — KEEP
 **What it does**: Checks /var/lib/candlepin usage < 90%.
-**Decision**: In containerized foremanctl, there is no `/var/lib/candlepin` on the host. Candlepin data lives in PostgreSQL. Mount CP data to `/var/lib`?
+**Decision**: Keep. No `/var/lib/candlepin` on host in containerized model. Mount CP data to `/var/lib`? See https://github.com/theforeman/foremanctl/issues/478
 
 ### disk/performance — KEEP
 **What it does**: Runs `fio` benchmarks, warns if <60 MB/sec.
@@ -173,9 +173,9 @@ In foremanctl's containerized model:
 
 ## Repository / Package Checks
 
-### repositories/check_non_rh_repository — RETHINK (Satellite)
+### repositories/check_non_rh_repository — DROP (Satellite)
 **What it does**: Checks if EPEL or non-RH repos are enabled.
-**Decision**: Satellite only. Should we continue being strict about RPM repos?
+**Decision**: Drop. With how few RPMs foremanctl requires, we can be more flexible.
 
 ### repositories/check_upstream_repository — RETHINK (Satellite)
 **What it does**: Checks if upstream Foreman repos are enabled on Satellite.
@@ -229,9 +229,9 @@ In foremanctl's containerized model:
 **What it does**: Finds OpenSCAP reports with broken associations.
 **Decision**: OpenSCAP is a supported plugin. DB query check. Is this still necessary?
 
-### foreman_proxy/check_tftp_storage — KEEP
+### foreman_proxy/check_tftp_storage — NEEDS MORE DISCUSSION
 **What it does**: Cleans old kernel/initramfs files from TFTP boot dir.
-**Decision**: TFTP is a major provisioning component and will be supported. Implementation may change depending on whether TFTP runs on host or in container.
+**Decision**: Implementation depends on host vs container. Needs more discussion.
 
 ### foreman_proxy/verify_dhcp_config_syntax — KEEP
 **What it does**: Validates ISC DHCP config.
@@ -276,11 +276,13 @@ Check that systemd timers for recurring Foreman tasks (hourly, daily, weekly, mo
 
 | Decision | Count | Checks |
 |----------|-------|--------|
-| **KEEP** | ~24 | check_tmout, env_proxy, check_ipv6_disable, disk/available_space, disk/performance, db_up (x3), db_index (x3), validate_external_db_version, facts_names, server_ping, services_up, foreman_tasks (x5), pulpcore/no_running_tasks, container/podman_login, restore/validate_hostname, restore/validate_interfaces, check_tftp_storage, verify_dhcp_config, puppet checks (x2 BYOP conditional) |
-| **RETHINK** | ~9 | disk/available_space_candlepin, disk/postgresql_mountpoint, check_corrupted_roles, check_duplicate_permissions, foreman_openscap, maintenance_mode/check_consistency, check_hotfix_installed, backup/certs_tar_exist, restore/validate_backup, restore/validate_postgresql_dump_permissions |
-| **KEEP (Satellite)** | ~4 | check_subscription_manager_release, system_registration, iop_*/db_up (x5), non_rh_packages |
-| **RETHINK (Satellite)** | ~2 | repositories/check_non_rh_repository, repositories/check_upstream_repository |
+| **KEEP** | ~23 | check_tmout, env_proxy, disk/available_space, disk/available_space_candlepin, disk/performance, db_up (x3), db_index (x3), validate_external_db_version, facts_names, server_ping, services_up, foreman_tasks (x5), pulpcore/no_running_tasks, container/podman_login, restore/validate_hostname, restore/validate_interfaces, verify_dhcp_config, puppet checks (x2 BYOP conditional) |
+| **NEEDS MORE DISCUSSION** | ~2 | check_ipv6_disable, foreman_proxy/check_tftp_storage |
+| **RETHINK** | ~8 | disk/postgresql_mountpoint, check_corrupted_roles, check_duplicate_permissions, foreman_openscap, maintenance_mode/check_consistency, check_hotfix_installed, backup/certs_tar_exist, restore/validate_backup, restore/validate_postgresql_dump_permissions |
+| **KEEP (Satellite)** | ~3 | system_registration, iop_*/db_up (x5), non_rh_packages |
+| **DROP (Satellite)** | ~2 | check_subscription_manager_release, repositories/check_non_rh_repository |
+| **RETHINK (Satellite)** | ~1 | repositories/check_upstream_repository |
 | **RETHINK (upstream + Satellite)** | ~1 | repositories/validate |
 | **DROP** | ~4 | root_user, validate_dnf_config, check_sha1_certificate_authority, check_external_db_evr_permissions |
-| **ALREADY EXISTS** | ~4 | check_tuning_requirements, check_database_connection, check_hostname, certificate_checks |
+| **ALREADY EXISTS** | ~6 | check_features, check_hostname, check_database_connection, check_system_requirements, check_subuid_subgid, certificate_checks |
 | **NEW** | ~1 | recurring_timers |
