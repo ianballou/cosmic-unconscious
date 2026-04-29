@@ -15,10 +15,10 @@
 
 | foreman-maintain Command | Description | foremanctl Status | Notes |
 |--------------------------|-------------|-------------------|-------|
-| `health check` | Run health checks | Partial (`checks`) | foremanctl has 4 checks (features, hostname, db_connection, system_requirements). foreman-maintain has ~50 checks. |
-| `health check --label X` | Run specific check | Not yet | Need per-check selection mechanism |
-| `health list` | List available checks | Not yet | |
-| `health list-tags` | List available tags | Not yet | |
+| `health check` | Run health checks | SAT-44798 | foremanctl has 4 checks (features, hostname, db_connection, system_requirements). foreman-maintain has ~50 checks. |
+| `health check --label X` | Run specific check | SAT-44798 | Need per-check selection mechanism |
+| `health list` | List available checks | SAT-44798 | |
+| `health list-tags` | List available tags | SAT-44798 | |
 | `service start/stop/restart` | Manage services | Drop | With foreman.target, this becomes less necessary. Introduce only as necessary. |
 | `service status` | Service status | Drop | |
 | `service list` | List managed services | Drop | |
@@ -30,12 +30,12 @@
 | `packages lock/unlock/status` | Package version locking | Drop | Very few host RPMs in containerized model |
 | `packages check-update` | Check for package updates | Drop | |
 | `packages install/update` | Install/update packages | Drop | |
-| `maintenance-mode start/stop/status` | Maintenance mode | Not yet | Blocks port 443, stops timers, disables sync plans |
+| `maintenance-mode start/stop/status` | Maintenance mode | SAT-44796 | Blocks port 443, stops timers, disables sync plans |
 | `advanced procedure run` | Run individual procedure | Drop | Developers can run Ansible roles/playbooks directly |
 | `advanced procedure by-tag` | Run procedures by tag | Drop | |
 | `plugin purge-puppet` | Remove puppet | In progress | SAT-40445, reworked under feature management |
-| `self-upgrade` | Major version self-upgrade | Rethink | Enables newer maintenance repository and updates foreman-maintain today. Track in SAT-39696. |
-| `report` | Generate usage report | Move | SatStats reporting should move to another tool. Unrelated to configuring Foreman. |
+| `self-upgrade` | Major version self-upgrade | SAT-44795 | Enables newer maintenance repository and updates foreman-maintain today. The upgrade process will define if this is still necessary. |
+| `report` | Generate usage report | SAT-44804 | SatStats reporting should move to another tool. Unrelated to configuring Foreman. |
 
 ## foreman-maintain Feature Inventory (definitions/features/)
 
@@ -119,12 +119,12 @@ These are service/component abstractions used by checks and procedures:
 | foreman_upgrade | HIGH | Pre-checks, package updates, installer run, post-checks |
 | satellite_upgrade | HIGH | Similar to foreman_upgrade + satellite-specific |
 | update | MEDIUM | Check + package update + installer |
-| self_upgrade | Rethink | Track within SAT-39696. The upgrade process will define if this is still necessary. |
+| self_upgrade | Rethink (SAT-44795) | The upgrade process will define if this is still necessary. |
 | services | DROP | With foreman.target, less necessary. Introduce only as necessary. |
-| maintenance_mode | LOW | Enable/disable/status |
+| maintenance_mode | LOW (SAT-44796) | Enable/disable/status |
 | packages | DROP | Very few host RPMs in containerized model |
 | puppet | Reworked | Under feature management (SAT-40445) |
-| report | Move | SatStats reporting should move to another tool. |
+| report | SAT-44804 | SatStats reporting should move to another tool. |
 
 ## Priority Recommendation
 
@@ -140,4 +140,4 @@ These are service/component abstractions used by checks and procedures:
 
 ### Moved Out
 - **Service management** — Dropped. With foreman.target, less necessary. Introduce only as necessary.
-- **Report generation** — Move to a separate tool (SatStats). Unrelated to configuring Foreman.
+- **Report generation** — SAT-44804. Move to a separate tool (SatStats). Unrelated to configuring Foreman.

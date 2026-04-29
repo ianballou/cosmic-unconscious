@@ -3,7 +3,8 @@ This is Katello -- a content and subscription management plugin for Foreman.
 ## Additional Context
 - Read CLAUDE.md at the top level of this repo for detailed project conventions, command references, and architectural guidance.
 - Before starting any task, run load_skill("katello-docs") to review accumulated project knowledge (gotchas, patterns, Pulp workflows).
-- At the end of each session, remind the user to update project docs in ~/cosmic-unconscious/projects/katello/docs/ and commit.
+- The docs loaded via katello-docs are read-only copies deployed by bootstrap. The source of truth is ~/cosmic-unconscious/projects/katello/docs/. Never edit the copies under .agents/skills/.
+- At the end of each session, remind the user to update the source docs in ~/cosmic-unconscious/projects/katello/docs/ and commit in that repo (cd ~/cosmic-unconscious && git add -A && git commit).
 
 ## Layout
 - Plugin code: this directory (Rails Engine)

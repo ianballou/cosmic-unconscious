@@ -109,6 +109,11 @@ description: Accumulated project knowledge for ${project} -- gotchas, patterns, 
 
 Accumulated knowledge from working on ${project}. Load supporting files for details.
 
+IMPORTANT: These files are read-only copies deployed by bootstrap.sh.
+Do NOT edit them here. The source of truth is:
+  ~/cosmic-unconscious/projects/${project}/docs/
+To update, edit the source files and commit in the cosmic-unconscious repo.
+
 ## Available docs
 SKILL_EOF
             for doc_file in "$project_dir"/docs/*.md; do
