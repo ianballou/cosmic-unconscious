@@ -1,7 +1,8 @@
 This is Foreman -- a lifecycle management tool for physical and virtual servers.
 
 ## Additional Context
-- Accumulated project knowledge (gotchas, patterns) lives in ~/cosmic-unconscious/projects/foreman/docs/. Read the relevant file before investigating bugs or reviewing code.
+- Before starting any task, run load_skill("foreman-docs") to review accumulated project knowledge (gotchas, patterns).
+- At the end of each session, remind the user to update project docs in ~/cosmic-unconscious/projects/foreman/docs/ and commit.
 
 ## Layout
 - Code: this directory

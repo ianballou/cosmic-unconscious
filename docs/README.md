@@ -106,3 +106,4 @@ Slash commands in `global/config.yaml` must reference the flat path too:
 | `recipes/*` | `~/.local/share/goose/recipes/` |
 | `projects/<p>/goosehints` | `<project_dir>/.goosehints` |
 | `projects/<p>/skills/*` | `<project_dir>/.agents/skills/` |
+| `projects/<p>/docs/*` | `<project_dir>/.agents/skills/<p>-docs/` (auto-generated skill) |

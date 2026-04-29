@@ -90,6 +90,36 @@ for project in "$@"; do
                 echo "  - project skill: $skill_name"
             done
         fi
+
+        # Deploy docs/ as a skill (name-docs)
+        if [ -d "$project_dir/docs" ]; then
+            docs_skill_name="${project}-docs"
+            docs_skill_dest="$PROJECT_PATH/.agents/skills/$docs_skill_name"
+            rm -rf "$docs_skill_dest"
+            mkdir -p "$docs_skill_dest"
+
+            # Generate SKILL.md wrapper that lists all doc files
+            cat > "$docs_skill_dest/SKILL.md" << SKILL_EOF
+---
+name: ${docs_skill_name}
+description: Accumulated project knowledge for ${project} -- gotchas, patterns, and reference docs
+---
+
+# ${project} Project Docs
+
+Accumulated knowledge from working on ${project}. Load supporting files for details.
+
+## Available docs
+SKILL_EOF
+            for doc_file in "$project_dir"/docs/*.md; do
+                [ -f "$doc_file" ] || continue
+                doc_basename=$(basename "$doc_file")
+                cp "$doc_file" "$docs_skill_dest/$doc_basename"
+                echo "- ${doc_basename}: load_skill(\"${docs_skill_name}/${doc_basename}\")" >> "$docs_skill_dest/SKILL.md"
+            done
+
+            echo "  - docs skill: $docs_skill_name"
+        fi
     else
         echo "  WARNING: $project directory not found on this VM, skipped local deployment"
     fi

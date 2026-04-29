@@ -7,7 +7,8 @@
 - Source repos:
   - /home/vagrant/foreman_maintain (foreman-maintain, Ruby)
   - /home/vagrant/foremanctl (foremanctl, Python/Ansible)
-- See docs/ for evolving design, migration map, and discoveries
+- Before starting any task, run load_skill("foremanctl-docs") to review accumulated project knowledge (design, migration map, gotchas, patterns).
+- At the end of each session, remind the user to update project docs in ~/cosmic-unconscious/projects/foremanctl/docs/ and commit.
 
 ## Architecture Quick Reference
 - foremanctl commands = Ansible playbooks in src/playbooks/<name>/<name>.yaml
