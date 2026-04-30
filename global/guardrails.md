@@ -1,3 +1,10 @@
+## Formatting
+- Do NOT use emojis in public documents (Confluence pages, Jira comments, committed docs, PRs). Emojis are fine in chat responses and TODO notes.
+
+## Privacy
+- Do NOT save hostnames, IP addresses, usernames, email addresses, or other personally identifiable information (PII) to files, docs, or skills unless you explicitly ask and the user confirms.
+- When documenting examples from live systems, use generic placeholders (e.g., `quadlet.example.com`, `192.168.x.x`, `user@example.com`).
+
 ## Development VM Guardrails
 - This is a development VM with running services. Do NOT restart services (foreman, postgresql, pulpcore, redis, candlepin) unless explicitly asked.
 - Do NOT modify files under /etc/ or /var/ unless explicitly asked.
