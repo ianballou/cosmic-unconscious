@@ -45,8 +45,9 @@ The following commands exist today in foreman-maintain. The recommendations belo
 
 ### `report` — Generate usage/inventory reports
 - **Need it?** Move — SatStats reporting should ideally move to another tool since it's unrelated to configuring Foreman. This way it could remain Ruby too.
-- **Tracked?** Needs ticket
+- **Tracked?** SAT-44804 (report command), SAT-44834 (sosreport integration)
 - **Size**: Epic
+- **⚠️ sosreport dependency**: The sos Foreman plugin calls `foreman-maintain report` to collect data for sosreports. Wherever this functionality lands, the [sos plugin](https://github.com/sosreport/sos/blob/main/sos/report/plugins/foreman_installer.py) must be updated to call the new tool. See [SAT-44834](https://redhat.atlassian.net/browse/SAT-44834) and parent epic [SAT-43762](https://redhat.atlassian.net/browse/SAT-43762).
 
 ### `packages` — RPM locking, install, update
 - **Need it?** No — very few host RPMs in containerized model. Can users just manage RPMs with dnf? Or do we still need gating with dnf filtering?
@@ -112,7 +113,7 @@ foreman-maintain scenarios run a number of tasks sequentially. If one task is fa
 | backup | Keep | Needs ticket | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
 | restore | Keep | Needs ticket | Epic (combined with backup) | To be implemented in the backup epic. |
 | maintenance-mode | Keep | SAT-44796 | Story under SAT-40932 | Blocks port 443, stops timers, disables sync plans. Depends on SAT-39696, SAT-39697. |
-| report | Move | Needs ticket | Epic | SatStats reporting should ideally move to another tool since it's unrelated to configuring Foreman. |
+| report | Move | SAT-44804, SAT-44834 | Epic | SatStats reporting should move to another tool. sosreport calls `foreman-maintain report` — sos plugin must be updated too (SAT-44834). |
 | packages | Drop | N/A | -- | Very few host RPMs in containerized model. |
 | self-upgrade | Rethink | SAT-44795 | Task under SAT-40932 | Enables newer maintenance repository and updates foreman-maintain today. The upgrade process will define if this is still necessary. |
 | advanced | Drop | N/A | -- | Developers can run Ansible roles/playbooks directly. Don't build unless a need is identified. |

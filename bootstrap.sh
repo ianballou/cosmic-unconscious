@@ -1,7 +1,7 @@
 #!/bin/bash
 # cosmic-unconscious bootstrap
-# Usage: ./bootstrap.sh                    # Global only
-#        ./bootstrap.sh katello            # Global + Katello
+# Usage: ./bootstrap.sh                    # Global + all projects
+#        ./bootstrap.sh katello            # Global + Katello only
 #        ./bootstrap.sh katello foreman    # Global + Katello + Foreman
 set -e
 
@@ -43,8 +43,19 @@ for recipe_dir in "$SCRIPT_DIR"/recipes/*/; do
     echo "  - recipe: $recipe_name"
 done
 
-# --- Deploy requested projects ---
-for project in "$@"; do
+# --- Deploy projects ---
+# If no projects specified, auto-discover all from projects/
+if [ $# -eq 0 ]; then
+    projects=()
+    for project_dir in "$SCRIPT_DIR"/projects/*/; do
+        [ -d "$project_dir" ] || continue
+        projects+=("$(basename "$project_dir")")
+    done
+else
+    projects=("$@")
+fi
+
+for project in "${projects[@]}"; do
     project_dir="$SCRIPT_DIR/projects/$project"
     if [ ! -d "$project_dir" ]; then
         echo ""

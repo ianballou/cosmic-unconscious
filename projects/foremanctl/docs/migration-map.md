@@ -35,7 +35,7 @@
 | `advanced procedure by-tag` | Run procedures by tag | Drop | |
 | `plugin purge-puppet` | Remove puppet | In progress | SAT-40445, reworked under feature management |
 | `self-upgrade` | Major version self-upgrade | SAT-44795 | Enables newer maintenance repository and updates foreman-maintain today. The upgrade process will define if this is still necessary. |
-| `report` | Generate usage report | SAT-44804 | SatStats reporting should move to another tool. Unrelated to configuring Foreman. |
+| `report` | Generate usage report | SAT-44804, SAT-44834 | SatStats reporting should move to another tool. sosreport's sos plugin calls `foreman-maintain report` — must be updated for the new tool ([SAT-44834](https://redhat.atlassian.net/browse/SAT-44834)). |
 
 ## foreman-maintain Feature Inventory (definitions/features/)
 
@@ -124,7 +124,7 @@ These are service/component abstractions used by checks and procedures:
 | maintenance_mode | LOW (SAT-44796) | Enable/disable/status |
 | packages | DROP | Very few host RPMs in containerized model |
 | puppet | Reworked | Under feature management (SAT-40445) |
-| report | SAT-44804 | SatStats reporting should move to another tool. |
+| report | SAT-44804, SAT-44834 | SatStats reporting should move to another tool. sos plugin needs updating too. |
 
 ## Priority Recommendation
 
@@ -140,4 +140,4 @@ These are service/component abstractions used by checks and procedures:
 
 ### Moved Out
 - **Service management** — Dropped. With foreman.target, less necessary. Introduce only as necessary.
-- **Report generation** — SAT-44804. Move to a separate tool (SatStats). Unrelated to configuring Foreman.
+- **Report generation** — SAT-44804. Move to a separate tool (SatStats). Unrelated to configuring Foreman. Note: sosreport's sos plugin calls `foreman-maintain report`, so the sos plugin must also be updated for the new tool (SAT-44834, parent epic SAT-43762).
