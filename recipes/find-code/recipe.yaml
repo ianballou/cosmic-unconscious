@@ -14,6 +14,9 @@ instructions: |
   Question:
   {{ question }}
 
+prompt: |
+  {{ question }}
+
 activities:
   - "How does this feature work?"
   - "Trace this code flow end to end"
@@ -31,5 +34,5 @@ parameters:
     description: "Path to the project code"
   - key: question
     input_type: string
-    requirement: user_prompt
+    requirement: required
     description: "What do you want to understand?"

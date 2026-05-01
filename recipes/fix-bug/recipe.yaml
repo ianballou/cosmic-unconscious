@@ -162,6 +162,9 @@ instructions: |
   Bug details:
   {{ bug_description }}
 
+prompt: |
+  {{ bug_description }}
+
 activities:
   - "Fix this bug"
   - "Help me implement a fix for this issue"
@@ -181,5 +184,5 @@ parameters:
     description: "Path to the project code"
   - key: bug_description
     input_type: string
-    requirement: user_prompt
+    requirement: required
     description: "Bug report, issue link, or root cause description"

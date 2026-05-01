@@ -167,6 +167,9 @@ instructions: |
   PR/MR details:
   {{ review_context }}
 
+prompt: |
+  {{ review_context }}
+
 activities:
   - "Review this pull request"
   - "Help me review this code change"
@@ -186,5 +189,5 @@ parameters:
     description: "Path to the project code"
   - key: review_context
     input_type: string
-    requirement: user_prompt
+    requirement: required
     description: "PR link, issue link, or description of what to review"

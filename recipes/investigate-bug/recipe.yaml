@@ -18,6 +18,9 @@ instructions: |
   Bug report:
   {{ bug_description }}
 
+prompt: |
+  {{ bug_description }}
+
 activities:
   - "Investigate this bug report"
   - "Check logs for recent errors"
@@ -35,5 +38,5 @@ parameters:
     description: "Path to the project code"
   - key: bug_description
     input_type: string
-    requirement: user_prompt
+    requirement: required
     description: "The bug report or issue description"

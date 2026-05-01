@@ -18,6 +18,9 @@ instructions: |
   Requirements:
   {{ requirements }}
 
+prompt: |
+  {{ requirements }}
+
 activities:
   - "Design a feature from these requirements"
   - "Analyze the current implementation of this area"
@@ -37,5 +40,5 @@ parameters:
     description: "Path to the project code"
   - key: requirements
     input_type: string
-    requirement: user_prompt
+    requirement: required
     description: "Jira/Redmine requirements or feature description"

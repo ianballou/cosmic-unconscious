@@ -38,7 +38,46 @@ cosmic-unconscious/
 └── docs/                     # This README and meta-docs
 ```
 
-## Slash Commands
+## Recipes
+
+Recipes are reusable workflows that can be run interactively (slash commands)
+or headless from the CLI.
+
+### Available Recipes
+
+| Recipe | Description | Parameters |
+|--------|-------------|------------|
+| `code-review` | Collaborative code review | `project_name`, `project_path`, `review_context` |
+| `design-feature` | Feature design with requirements interview | `project_name`, `project_path`, `requirements` |
+| `find-code` | Navigate and explain code | `project_name`, `project_path`, `question` |
+| `fix-bug` | Systematic bug fixing | `project_name`, `project_path`, `bug_description` |
+| `investigate-bug` | Systematic bug investigation | `project_name`, `project_path`, `bug_description` |
+| `capture-learning` | Capture session learnings into skills/docs | (none) |
+
+### CLI Usage
+
+Run a recipe headless with all parameters inline:
+
+```
+goose run --recipe code-review \
+  --params project_name=katello \
+  --params project_path=/home/user/katello \
+  --params review_context="Review https://github.com/org/repo/pull/123"
+```
+
+Omit a required parameter and goose will prompt for it interactively:
+
+```
+goose run --recipe find-code \
+  --params project_name=foreman \
+  --params project_path=/home/user/foreman
+# goose will prompt for "question"
+```
+
+### Slash Commands
+
+Slash commands (defined in `global/config.yaml`) launch recipes
+interactively inside a session.
 
 | Command | What it does |
 |---------|-------------|
