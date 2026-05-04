@@ -68,3 +68,9 @@ extensions:
     type: platform
     name: Extension Manager
     bundled: true
+  atlassian-mcp:
+    enabled: true
+    type: streamable_http
+    name: atlassian-mcp
+    uri: https://mcp.atlassian.com/v1/mcp/authv2
+    bundled: false
