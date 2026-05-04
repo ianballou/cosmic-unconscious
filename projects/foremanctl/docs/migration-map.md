@@ -23,8 +23,8 @@
 | `service status` | Service status | Drop | |
 | `service list` | List managed services | Drop | |
 | `service enable/disable` | Enable/disable services | Drop | |
-| `backup online/offline` | Create backup | Not yet | Complex scenario with many procedures |
-| `restore` | Restore from backup | Not yet | Complex scenario |
+| `backup online/offline` | Create backup | SAT-44838 | Complex scenario with many procedures |
+| `restore` | Restore from backup | SAT-44838 | Complex scenario |
 | `upgrade check/run` | Pre-upgrade checks, run upgrade | In progress | SAT-39696 |
 | `update check/run` | Update checks, run update | In progress | SAT-39697 |
 | `packages lock/unlock/status` | Package version locking | Drop | Very few host RPMs in containerized model |
@@ -114,8 +114,8 @@ These are service/component abstractions used by checks and procedures:
 
 | Scenario | Complexity | foreman-maintain Steps |
 |----------|-----------|----------------------|
-| backup (online/offline) | HIGH | ~15 procedures, multiple DB dumps, config files, pulp content |
-| restore | HIGH | ~15 procedures, DB restoration, config restoration |
+| backup (online/offline) | HIGH (SAT-44838) | ~15 procedures, multiple DB dumps, config files, pulp content |
+| restore | HIGH (SAT-44838) | ~15 procedures, DB restoration, config restoration |
 | foreman_upgrade | HIGH | Pre-checks, package updates, installer run, post-checks |
 | satellite_upgrade | HIGH | Similar to foreman_upgrade + satellite-specific |
 | update | MEDIUM | Check + package update + installer |

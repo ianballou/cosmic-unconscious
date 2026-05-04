@@ -57,10 +57,10 @@ All Foreman services run as podman quadlet containers managed via systemd:
 |---------|---------|------|-------|
 | upgrade | SAT-39696 | Epic (in progress) | In progress. |
 | update | SAT-39697 | Epic (in progress) | In progress. |
-| health | Needs ticket | Story within a small Epic combined with service | New `foremanctl health` command for runtime health checks. |
-| backup | Needs ticket | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
-| restore | Needs ticket | Epic (combined with backup) | To be implemented in the backup epic. |
-| maintenance-mode | Needs ticket | Story (within upgrade Epic) | Link as related to `update` & `backup` Epics. Blocks port 443, stops timers, disables sync plans. |
+| health | SAT-44798 | Story within a small Epic combined with service | New `foremanctl health` command for runtime health checks. |
+| backup | SAT-44838 | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
+| restore | SAT-44838 | Epic (combined with backup) | To be implemented in the backup epic. |
+| maintenance-mode | SAT-44796 | Story (within upgrade Epic) | Link as related to `update` & `backup` Epics. Blocks port 443, stops timers, disables sync plans. |
 
 ### Commands to Drop
 
@@ -414,13 +414,13 @@ This is an Epic because of the sheer volume of reports (~36 definitions, ~2000 l
 |---------------|---------------|---------|------|-------|
 | upgrade | Keep | SAT-39696 | Epic (in progress) | In progress. |
 | update | Keep | SAT-39697 | Epic (in progress) | In progress. |
-| health command | Keep | Needs ticket | Story within a small Epic combined with service | New `foremanctl health` command for runtime health checks. |
-| check implementations | Keep | Needs ticket | Story within a small Epic combined with health | |
+| health command | Keep | SAT-44798 | Story within a small Epic combined with service | New `foremanctl health` command for runtime health checks. |
+| check implementations | Keep | SAT-44798 | Story within a small Epic combined with health | |
 | service management | Drop | N/A | -- | With foreman.target, less necessary. Introduce only as necessary. |
-| backup | Keep | Needs ticket | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
-| restore | Keep | Needs ticket | Epic (combined with backup) | To be implemented in the backup epic. |
-| maintenance-mode | Keep | Needs ticket | Story (within upgrade Epic) | Link as related to `update` & `backup` Epics. |
-| report | Move | Needs ticket | Epic | SatStats reporting should move to another tool. |
+| backup | Keep | SAT-44838 | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
+| restore | Keep | SAT-44838 | Epic (combined with backup) | To be implemented in the backup epic. |
+| maintenance-mode | Keep | SAT-44796 | Story (within upgrade Epic) | Link as related to `update` & `backup` Epics. |
+| report | Move | SAT-44804, SAT-44834 | Epic | SatStats reporting should move to another tool. |
 | packages | Drop | N/A | -- | Very few host RPMs in containerized model. |
 | self-upgrade | Rethink | Needs tracking in SAT-39696 | -- | The upgrade process will define if this is still necessary. |
 | advanced | Drop | N/A | -- | Developers can run Ansible roles/playbooks directly. |

@@ -30,12 +30,12 @@ The following commands exist today in foreman-maintain. The recommendations belo
 
 ### `backup` — Online/offline backup
 - **Need it?** Yes — fundamental pre-maintenance safety net. What to back up may change significantly.
-- **Tracked?** Needs ticket
+- **Tracked?** SAT-44838
 - **Size**: Epic (combined with restore)
 
 ### `restore` — Restore from backup
 - **Need it?** Yes — paired with backup.
-- **Tracked?** Needs ticket
+- **Tracked?** SAT-44838
 - **Size**: Epic (combined with backup) — to be implemented in the backup epic.
 
 ### `maintenance-mode` — Block external access during maintenance
@@ -110,8 +110,8 @@ foreman-maintain scenarios run a number of tasks sequentially. If one task is fa
 | update | Keep | SAT-39697 | Epic (in progress) | In progress. |
 | health | Keep | SAT-44798 | Story under SAT-40932 | New `foremanctl health` command for runtime health checks. |
 | service | Drop | N/A | -- | With foreman.target, this becomes less necessary. Introduce only as necessary. |
-| backup | Keep | Needs ticket | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
-| restore | Keep | Needs ticket | Epic (combined with backup) | To be implemented in the backup epic. |
+| backup | Keep | SAT-44838 | Epic (combined with restore) | Largest untracked area. What to back up may change significantly. |
+| restore | Keep | SAT-44838 | Epic (combined with backup) | To be implemented in the backup epic. |
 | maintenance-mode | Keep | SAT-44796 | Story under SAT-40932 | Blocks port 443, stops timers, disables sync plans. Depends on SAT-39696, SAT-39697. |
 | report | Move | SAT-44804, SAT-44834 | Epic | SatStats reporting should move to another tool. sosreport calls `foreman-maintain report` — sos plugin must be updated too (SAT-44834). |
 | packages | Drop | N/A | -- | Very few host RPMs in containerized model. |
