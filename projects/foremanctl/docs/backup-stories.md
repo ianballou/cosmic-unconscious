@@ -239,7 +239,7 @@ Service orchestration (when `--online`):
 - Worker list should be a variable, not hardcoded
 
 Config files (when `--online`):
-- Use `--ignore-changed-files` instead of retry logic
+- Use `--ignore-changed-files` instead of the offline retry-on-changed-files logic (services are running, so files are expected to change)
 
 Pulp content (when `--online`):
 - Consistency checking loop:
