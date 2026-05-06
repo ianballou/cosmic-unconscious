@@ -330,7 +330,6 @@ Address gaps discovered during implementation:
 - `foremanctl backup` on a Capsule produces a valid, restorable backup
 - `foremanctl restore` on a Capsule restores a working Capsule instance
 - Online and incremental modes work on Capsule
-- Capsule backup cannot be restored onto a Server and vice versa (or at minimum, a clear warning)
 
 **Dependencies:** Stories 1-6, containerized Capsule availability in foremanctl
 
