@@ -28,7 +28,7 @@ Stories 1-3 build on each other sequentially. Story 4 (restore) could start in p
 - **Story 2 before Pulp** because config files (especially `parameters.yaml`, credentials, and Pulp encryption keys) are required for a meaningful restore. Without them, DB dumps alone are insufficient -- you'd need to manually reconstruct the foremanctl state directory.
 - **Story 3 completes offline backup** -- Pulp content is the largest component but also the most straightforward (just a tar). It also introduces `--tar-volume-size` and `--skip-pulp-content`.
 - **Story 4 after Stories 1-3** because restore needs something complete to restore from. A restore that can't restore config files isn't useful in practice -- `foremanctl deploy` needs `parameters.yaml` to regenerate everything.
-- **Story 5 (online) after restore** because online backup changes behavior in all three data roles (config: `--ignore-changed-files`; Pulp: consistency loop; services: stop workers only). Having the offline path proven and restorable first means online changes can be validated against a known-good baseline.
+- **Story 5 (online) after restore** because online backup changes behavior in all three data roles (config: no retry on changed files; Pulp: consistency loop; services: stop workers only). Having the offline path proven and restorable first means online changes can be validated against a known-good baseline.
 - **Story 6 (incremental) last** because it's an optimization, not a functional requirement. The `.snar` files are already produced as a side effect of `--listed-incremental` in Stories 2 and 3 -- this story only adds the "copy `.snar` from previous backup" logic and the CLI param.
 
 ---
@@ -46,7 +46,7 @@ CLI and playbook scaffold:
 - `src/playbooks/backup/metadata.obsah.yaml` -- CLI params (all with `persist: false`): positional `backup_dir`, `online`, `skip_pulp_content`, `incremental`, `tar_volume_size`, `wait_for_tasks`
 - Backup directory creation with permission validation
 - Params not yet implemented (`online`, `incremental`, `tar_volume_size`) should fail early with a clear "not yet supported" message rather than being silently ignored (or keep placeholders)
-- `tar_volume_size` is only for Pulp, will be implemented with the Pulp backup later
+  - `tar_volume_size` is only for Pulp, will be implemented with the Pulp backup later
 
 Preflight checks:
 - DB index integrity via `amcheck` (skip gracefully if amcheck extension is unavailable or DB is remote)
@@ -80,7 +80,7 @@ Metadata:
   - `container_images` (from `podman images --format json` -- replaces foreman-maintain's `rpm -qa`)
   - `parameters_hash` (sha256 of parameters.yaml)
   - `proxy_config` (DNS/DHCP interface settings from parameters.yaml -- needed for restore validation)
-- Restore uses metadata for: hostname validation, interface validation, incremental detection, OS version comparison
+  - The above may need adjustment during implementation
 
 Error recovery:
 - Rescue block always restarts `foreman.target` on failure
@@ -93,6 +93,7 @@ Error recovery:
 - Preflight catches corrupt indexes and running tasks
 - Works for both local and remote PostgreSQL configurations
 - On a Capsule instance, only `pulpcore.dump` and `container_gateway.dump` are produced (no `foreman.dump` or `candlepin.dump`)
+  - Leave validation for later depending on status of containerized capsules
 
 ---
 
@@ -100,12 +101,13 @@ Error recovery:
 
 **Jira:** [SAT-44896](https://redhat.atlassian.net/browse/SAT-44896)
 
-**Summary:** Add config file collection to the backup flow. After this, backups contain everything needed for a restore -- databases plus all host-level configuration and credentials.
+**Summary:** Add config file collection to the backup flow. After this, backups contain everything needed for a (Pulp-less) restore -- databases plus all host-level configuration and credentials.
 
 **Scope -- add config file backup phase to existing playbook (role or tasks):**
 
 Static paths:
-- `<state_dir>/` (parameters.yaml, generated credentials, .installed flag, OAuth keys)
+- foremanctl state files (parameters.yaml, generated credentials, .installed flag, OAuth keys)
+  - Secrets for things like yaml configs are generated from this.
 - `/etc/pki/httpd/`, `/root/certificates/`
 - `/root/candlepin.keystore`, `/root/candlepin.truststore`
 - `/root/foreman-proxy-ssh`, `/root/foreman-proxy-ssh.pub`
@@ -121,9 +123,11 @@ Conditional paths (based on `enabled_features` from `parameters.yaml`):
 - Ansible: `/etc/ansible/`
 
 Behavior:
-- GNU tar into `config_files.tar.gz`
-- Always use `--listed-incremental` (creates `.config.snar` as a side effect -- lays groundwork for Story 6)
+- Tar into `config_files.tar.gz`
+- Always use `--listed-incremental` (creates `.config.snar` as a side effect -- lays groundwork for [SAT-44903](https://redhat.atlassian.net/browse/SAT-44903))
+  - Or, consider just implementing incremental here if it doesn't seem difficult.
 - Retry up to 3x on tar exit code 1 (files changed during archive), 10s delay between retries
+  - foreman-maintain does this today.
 - Skip paths that don't exist (no error)
 
 Instance type awareness:
@@ -136,6 +140,7 @@ Instance type awareness:
 - Conditional paths included/excluded based on feature detection from `parameters.yaml`
 - Missing paths silently skipped
 - Retry logic handles files changing during tar
+- Generally, the offline backup matches the experience you get from `foreman-maintain backup offline` with Pulp skipped.
 
 ---
 
@@ -148,13 +153,13 @@ Instance type awareness:
 **Scope -- add Pulp content backup phase to existing playbook (role or tasks):**
 - Tar `/var/lib/pulp/` into `pulp_data.tar`
 - Exclude `database_fields.symmetric.key` and `django_secret_key` (already in config backup)
-- Always use `--listed-incremental` (creates `.pulp.snar` -- lays groundwork for Story 6)
+- Always use `--listed-incremental` (creates `.pulp.snar` -- lays groundwork for [SAT-44903](https://redhat.atlassian.net/browse/SAT-44903))
+  - Reference: [GNU tar incremental dumps](https://www.gnu.org/software/tar/manual/html_section/Incremental-Dumps.html)
 - Support `--tar-volume-size` (split via `--tape-length`)
 - `--skip-pulp-content` skips this phase entirely
 
 Instance type awareness:
-- Capsule instances also have `/var/lib/pulp/` (their own synced content). Same backup logic applies.
-- `--skip-pulp-content` is particularly useful for Capsules since their Pulp content can be re-synced from the Server
+- Backup for Pulp is likely the same on Capsules.
 
 **Acceptance criteria:**
 - `pulp_data.tar` created in backup directory
@@ -169,7 +174,7 @@ Instance type awareness:
 
 **Jira:** [SAT-44898](https://redhat.atlassian.net/browse/SAT-44898)
 
-**Summary:** Deliver `foremanctl restore` -- validate a backup, extract it, restore databases, restore Pulp content, and redeploy. After this, the full backup/restore cycle is proven.
+**Summary:** Deliver `foremanctl restore`. Validate a backup, extract it, restore databases, restore Pulp content, and redeploy.
 
 **Scope:**
 
@@ -181,6 +186,7 @@ Validation (runs before any destructive action):
 - Validate backup contents -- required files vary by instance type:
   - Server (Katello): `config_files.tar.gz` + `foreman.dump` + `candlepin.dump` + `pulpcore.dump`
   - Capsule (Proxy with Content): `config_files.tar.gz` + `pulpcore.dump` + `container_gateway.dump` (no foreman/candlepin dumps)
+  - Vanilla Foreman: `config_files.tar.gz` + `foreman.dump`
   - `pulp_data.tar` optional in all cases
 - Hostname matches current FQDN (from `metadata.yml`)
 - Network interfaces exist if DNS/DHCP config recorded in metadata
@@ -207,8 +213,8 @@ Error recovery:
 Instance type awareness:
 - Backup validation adapts required files based on instance type (detected from `metadata.yml` or restored `parameters.yaml`)
 - Restore only attempts to drop/restore databases that are present in the backup
-- Step 8 (`foremanctl deploy`) naturally handles Server vs. Capsule -- it reads `parameters.yaml` and deploys accordingly
-- foreman-maintain passes `--foreman-proxy-register-in-foreman false` during Capsule restore to prevent re-registration. Investigate during implementation whether `foremanctl deploy` needs equivalent logic.
+- Step 8 (`foremanctl deploy`) naturally handles Server vs. Capsule.
+- Note: foreman-maintain passes `--foreman-proxy-register-in-foreman false` during Capsule restore to prevent re-registration.
 
 **Acceptance criteria:**
 - `foremanctl restore /path` restores a working system from a foremanctl backup
@@ -218,9 +224,6 @@ Instance type awareness:
 - `foremanctl deploy` after restore regenerates all derived config (secrets, quadlets, httpd)
 - Works with backups that omit `pulp_data.tar`
 - System verified healthy after restore (API ping, services up)
-
-**Notes:**
-- `foremanctl deploy` replaces foreman-maintain's complex multi-step restore (installer reset, installer run, upgrade rake task, package reinstallation). No need for a `RequiredPackages` procedure or symlink conflict workarounds.
 
 ---
 
@@ -239,7 +242,8 @@ Service orchestration (when `--online`):
 - Worker list should be a variable, not hardcoded
 
 Config files (when `--online`):
-- Use `--ignore-changed-files` instead of the offline retry-on-changed-files logic (services are running, so files are expected to change)
+- Like foreman-maintain, we can collect the config files without retrying. Since services are up, the files are likely to change.
+  - See `--ignore-changed-files` in foreman-maintain.
 
 Pulp content (when `--online`):
 - Consistency checking loop:
@@ -258,11 +262,10 @@ Error recovery:
 
 **Acceptance criteria:**
 - `foremanctl backup --online /path` keeps API accessible throughout
-- Workers are stopped and restarted correctly
+- Dynflow and Pulp workers are stopped and restarted correctly
 - Pulp consistency loop retries until data is stable
-- Config tar uses `--ignore-changed-files`
 
-**Dependencies:** Stories 1-3
+**Dependencies:** Recommended to work on offline backup and restore first.
 
 ---
 
@@ -287,7 +290,7 @@ Restore:
 - Clear error message if chain is incomplete
 
 Implementation note:
-- The `.snar` files are already produced as a side effect of `--listed-incremental` in Stories 2 and 3. This story only adds: (1) the CLI param, (2) the "copy `.snar` from previous backup dir" logic in the directory preparation phase, and (3) restore-side chain validation. The tar commands themselves don't change.
+- The `.snar` files are already produced as a side effect of `--listed-incremental` in the previous stories. This story only adds: (1) the CLI param, (2) the "copy `.snar` from previous backup dir" logic in the directory preparation phase, and (3) restore-side chain validation. The tar commands themselves don't change.
 
 **Acceptance criteria:**
 - Incremental backup is significantly smaller than full
@@ -295,22 +298,22 @@ Implementation note:
 - Clear error if `.snar` files missing or chain incomplete
 - `metadata.yml` records incremental status
 
-**Dependencies:** Stories 1-3 (backup), Story 4 (restore)
+**Dependencies:** Non-incremental backup and restore working. Backup already passes `--listed-incremental` to tar.
 
 ---
 
 ## Story 7: Capsule backup and restore
 
-**Jira:** TBD
+**Jira:** [SAT-45029](https://redhat.atlassian.net/browse/SAT-45029)
 
-**Summary:** Validate and complete backup/restore support for containerized Capsule instances. Stories 1-6 are designed with instance-type awareness, but this story covers the actual testing, gap-filling, and any Capsule-specific behavior that emerges once the containerized Capsule exists in foremanctl.
+**Summary:** Validate and complete backup/restore support for containerized Capsule instances. The initial stories are designed with instance-type awareness, but this story covers the actual testing, gap-filling, and any Capsule-specific behavior that emerges once the containerized Capsule exists in foremanctl.
 
 **Scope:**
 
 Validate existing behavior on a Capsule instance:
 - Preflight checks work (Capsule has `pulpcore` and `container_gateway` databases -- amcheck runs against those only)
 - Database backup produces only `pulpcore.dump` and `container_gateway.dump` (no foreman/candlepin)
-- Config file backup collects the correct paths for a Capsule (proxy config, certs, SSH keys, feature-conditional paths like TFTP/DNS/DHCP). Note: container gateway config is a podman secret regenerated by `foremanctl deploy` — no host-level config files to back up.
+- Config file backup collects the correct paths for a Capsule (proxy config, certs, SSH keys, container gateway config, feature-conditional paths like TFTP/DNS/DHCP)
 - Pulp content backup works against Capsule's `/var/lib/pulp/`
 - Metadata correctly identifies enabled features
 - Online backup correctly identifies Capsule worker services
@@ -322,7 +325,8 @@ Validate restore on a Capsule instance:
 - Post-restore verification uses proxy ping, not Foreman API ping
 
 Address gaps discovered during implementation:
-- Capsule-specific config paths not present on a Server (container gateway config is a podman secret — no host files to back up, only the DB dump)
+- Container gateway config paths
+- Capsule-specific config paths not present on a Server
 - Certs tar handling -- foreman-maintain checks that the certs tarball exists on standalone proxies before backup. Determine whether this applies in the containerized model.
 - Any Capsule-specific preflight checks
 
