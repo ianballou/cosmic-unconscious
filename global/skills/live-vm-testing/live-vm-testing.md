@@ -301,6 +301,156 @@ sudo journalctl -u pulpcore-api --since '5 minutes ago' --no-pager
 sudo journalctl --rotate && sudo journalctl --vacuum-time=1s
 ```
 
+## Forklift Automated Testing Patterns
+
+When testing PRs that span multiple VMs (server + proxies), plan and script everything upfront before executing.
+
+### VM Build Strategy
+```bash
+# Define custom boxes in vagrant/boxes.d/99-local.yaml
+# Use stagingyum repos when nightly RPMs haven't been built recently
+# Build VMs in parallel when they don't depend on each other
+vagrant up centos9-stream-katello-nightly &
+# Wait for server before building proxies (proxies register to server)
+vagrant up centos9-stream-foreman-proxy-nightly
+```
+
+### OpenSSL Version Mismatch (CentOS Stream 9)
+The CentOS Stream 9 base vagrant box ships OpenSSL 3.0.x, but `dnf update` (run by foreman-installer's puppet) can upgrade to OpenSSL 3.5.x. This breaks `sshd` because the openssh binary was compiled against the old version. **Symptom:** `kex_exchange_identification: Connection reset by peer` — SSH connects at TCP level but resets before key exchange.
+
+**Fix:** Add a pre-task to the Ansible playbook that runs `dnf update -y` and reboots BEFORE the foreman-installer role:
+```yaml
+- hosts: all
+  become: true
+  pre_tasks:
+    - name: Update all packages before installer
+      dnf:
+        name: '*'
+        state: latest
+      register: update_result
+    - name: Reboot if packages were updated
+      reboot:
+        reboot_timeout: 300
+      when: update_result.changed
+  roles:
+    - role: katello  # or foreman_proxy_content
+```
+
+### Disabling vagrant-hostmanager
+The `vagrant-hostmanager` plugin tries to update the host's `/etc/hosts` via `sudo`, which hangs if no password/NOPASSWD is configured. Disable it:
+```bash
+echo "hostmanager_enabled: false" > ~/forklift/vagrant/settings.yaml
+```
+Then manage `/etc/hosts` entries manually or via Ansible.
+
+### Patching RPM-installed Katello with PR Changes
+When the stagingyum RPMs don't include your PR commits:
+```bash
+# Find the installed gem path
+GEM_DIR=$(ssh vagrant@$SERVER "rpm -ql rubygem-katello | grep 'app/services' | head -1 | xargs dirname | xargs dirname | xargs dirname")
+
+# Copy patched files from your local checkout
+scp ~/katello/app/services/katello/pulp3/repository_mirror.rb vagrant@$SERVER:/tmp/
+ssh vagrant@$SERVER "sudo cp /tmp/repository_mirror.rb $GEM_DIR/app/services/katello/pulp3/"
+
+# Restart foreman to pick up changes
+ssh vagrant@$SERVER "sudo systemctl restart foreman"
+```
+
+### Scripting Content Workflows
+Use `hammer` for content operations — it's faster than API calls and handles async waiting:
+```bash
+# Create product, repo, sync, CV, publish, promote in one script
+sudo hammer product create --organization-id 1 --name 'Test Product'
+sudo hammer repository create --organization-id 1 --product 'Test Product' \
+  --name 'PyPI test' --content-type python --url 'https://pypi.org' \
+  --python-package-includes 'small-package-name'
+sudo hammer repository synchronize --organization-id 1 --product 'Test Product' \
+  --name 'PyPI test'
+sudo hammer lifecycle-environment create --organization-id 1 --name Dev --prior Library
+sudo hammer content-view create --organization-id 1 --name 'Test CV' --repository-ids 1
+sudo hammer content-view publish --organization-id 1 --name 'Test CV'
+sudo hammer content-view version promote --organization-id 1 \
+  --content-view 'Test CV' --version 1.0 --to-lifecycle-environment Dev
+```
+
+**Important:** For python repos, always use `--python-package-includes` to limit to specific packages. Syncing all of PyPI will download millions of metadata records and bring down the system.
+
+### Capsule/Proxy Sync Testing
+```bash
+# Add lifecycle environments to capsule
+sudo hammer capsule content add-lifecycle-environment --id 2 \
+  --environment Library --organization-id 1
+sudo hammer capsule content add-lifecycle-environment --id 2 \
+  --environment Dev --organization-id 1
+
+# Sync capsule
+sudo hammer capsule content synchronize --id 2
+
+# Force re-sync (skip metadata check)
+sudo hammer capsule content synchronize --id 2 --skip-metadata-check true
+```
+
+### Pulp API Access (cert-based auth through Apache)
+```bash
+# From inside the VM — use the foreman-proxy client cert bundle
+CERT=/etc/pki/katello/private/$(hostname -f)-foreman-proxy-client-bundle.pem
+sudo curl -sk --cert $CERT "https://localhost/pulp/api/v3/distributions/python/pypi/"
+
+# The unix socket approach does NOT work for authenticated endpoints.
+# The socket bypasses Apache, so Pulp sees no credentials.
+# Status endpoint works (unauthenticated), but everything else returns 401.
+```
+
+### Verifying Python Content Distribution
+```bash
+# From the server — pip install via /pypi/ path
+pip3 install --index-url "https://SERVER_FQDN/pypi/ORG/ENV/CV/custom/PRODUCT/REPO/simple/" \
+  --trusted-host SERVER_FQDN --no-deps PACKAGE_NAME
+
+# From N-1 proxy (without /pypi/ Apache config) — use /pulp/content/ path
+pip3 install --index-url "https://PROXY_FQDN/pulp/content/ORG/ENV/CV/custom/PRODUCT/REPO/simple/" \
+  --trusted-host PROXY_FQDN --no-deps PACKAGE_NAME
+```
+
+### Root Disk Space on Hypervisor
+Libvirt stores VM disk images in `/var/lib/libvirt/images/` (on the root filesystem). Monitor space:
+```bash
+df -h /
+# Clean up unused base box images and old VM overlays
+virsh vol-list default
+# Delete old VMs properly (removes disk images too)
+cd ~/forklift && vagrant destroy OLD_VM_NAME
+```
+
+### Simulating Pre-upgrade State for Upgrade Task Testing
+When testing upgrade rake tasks that migrate from one Pulp pattern to another (e.g., publications → repository_versions), you need to create the old state first:
+```bash
+# Example: create a publication and point distributions to it
+CERT=/etc/pki/katello/private/$(hostname -f)-foreman-proxy-client-bundle.pem
+RV="/pulp/api/v3/repositories/python/python/UUID/versions/1/"
+
+# Create publication
+sudo curl -sk --cert $CERT -X POST \
+  "https://localhost/pulp/api/v3/publications/python/pypi/" \
+  -H "Content-Type: application/json" -d "{\"repository_version\": \"$RV\"}"
+
+# Point distribution to publication instead of repository_version
+sudo curl -sk --cert $CERT -X PATCH \
+  "https://localhost/pulp/api/v3/distributions/python/pypi/DIST_UUID/" \
+  -H "Content-Type: application/json" \
+  -d "{\"publication\": \"$PUB_HREF\", \"repository_version\": null}"
+
+# Set publication_href in Katello DB
+echo "UPDATE katello_repositories SET publication_href='$PUB_HREF'
+  WHERE id IN (SELECT kr.id FROM katello_repositories kr
+  JOIN katello_root_repositories krr ON kr.root_id=krr.id
+  WHERE krr.content_type='python');" | sudo -u postgres psql foreman
+
+# Then run the upgrade task
+sudo foreman-rake katello:upgrades:4.21:cleanup_python_publications
+```
+
 ## Gotchas
 
 ### Journal entries from crash-loops persist

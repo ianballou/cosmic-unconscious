@@ -58,12 +58,23 @@ instructions: |
   ============================================================
   Ask the user:
   - "Has someone you trust already tested this? Or should we test it ourselves?"
+  - "Does this need multi-VM testing (e.g., server + proxy)?"
 
   If testing is needed and the environment supports it, help the user run through
   the feature. Check that the new behavior works as described and that obvious
   regressions do not appear.
 
-  When testing via API:
+  PLANNING FIRST:
+  - Before touching any VM or running any command, learn everything you need.
+    Load the live-vm-testing skill. Read hammer --help for relevant subcommands.
+    Check the apidoc on the server. Understand the full workflow end-to-end.
+  - Script the entire test plan upfront. Do not discover commands one at a time.
+  - Identify the test matrix explicitly: what scenarios, what versions, what
+    configurations. Confirm with the user before executing.
+  - For multi-VM setups (server + proxies, N vs N-1), plan VM builds in
+    parallel where possible (proxies can build while you work on the server).
+
+  When testing via API or CLI:
   - Do a sanity check first (list or index endpoint) to confirm access.
   - Test all content/type combinations that the code branches on, not just
     the happy path. The most revealing tests are often the cross-type ones
@@ -73,6 +84,24 @@ instructions: |
     pattern, not a regression from this PR — adjust severity accordingly.
   - When a validation appears missing, confirm it is actually missing by testing
     directly against the API, not just by reading the code.
+
+  When testing upgrade/migration tasks:
+  - Simulate the pre-upgrade state first (create the old data pattern).
+  - Run the task and verify each step.
+  - Verify idempotency — run the task again and confirm no errors.
+  - Verify the end-to-end user workflow works after migration (e.g., pip install).
+
+  When testing N-1 proxy compatibility:
+  - Use a 4.x proxy registered to a nightly server.
+  - Verify the fallback code paths actually fire (check server logs).
+  - Verify content is accessible from the proxy via the correct endpoint.
+
+  BUG INVESTIGATION DURING TESTING:
+  - When a test fails, trace the full call chain through the code before guessing.
+  - Check the production.log on the server for stack traces.
+  - When you find a bug, determine if it's pre-existing or introduced by the PR.
+  - Isolate the root cause completely — don't just describe the symptom.
+  - Test your proposed fix on the VM before reporting.
 
   If testing is skipped, acknowledge it and move on.
 

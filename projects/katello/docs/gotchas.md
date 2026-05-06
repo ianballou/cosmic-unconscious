@@ -2,6 +2,30 @@
 
 Surprising behaviors and hard-won knowledge. Updated via `/capture`.
 
+## `to_hash` on HashWithIndifferentAccess strips indifferent access
+
+`HashWithIndifferentAccess#to_hash` returns a plain `Hash` with **string keys only**.
+Code that accesses the result with symbol keys silently gets `nil`:
+
+```ruby
+h = { "created_resources" => ["/pulp/api/v3/publications/..."] }.with_indifferent_access
+h[:created_resources]           # => ["/pulp/api/v3/publications/..."]  ✅
+h.to_hash[:created_resources]   # => nil  ❌
+h.to_hash["created_resources"]  # => ["/pulp/api/v3/publications/..."]  ✅
+```
+
+This bit `Katello::Pulp3::Task` — the `publication_href` class method uses symbol
+keys (`task[:created_resources]`), which works when callers pass
+`HashWithIndifferentAccess` data directly. But `publication_href_or_create` in
+`repository_mirror.rb` called `task.to_hash`, stripping indifferent access, causing
+`created_resources` to silently return `nil`. The `nil` then crashed at
+`href.include?('/publications/')` → `NoMethodError: undefined method 'include?' for nil`.
+
+**Rule:** Never use `to_hash` when the consumer expects symbol-key access. Use
+`task_data` (which preserves HWIA) or explicitly call `.with_indifferent_access`
+on the result. When writing methods that extract data from hashes, always add
+`.compact` before iterating to guard against nil values from upstream.
+
 ## ACS: `smart_proxy_ids` and `product_ids` are top-level params, not nested
 
 The ACS controller's `find_smart_proxies` and `find_products` methods read from
