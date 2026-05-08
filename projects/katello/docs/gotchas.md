@@ -68,6 +68,36 @@ pattern — `ensure_valid_deb_constraints` on `RootRepository` and
 `if: :deb?` or `return if simplified?`, so they never fire for other types.
 Not a concern for individual PRs that follow this pattern — it predates them.
 
+## Pulp polymorphic response monkey patch (pulpcore schema bug)
+
+Pulpcore 3.90+ update/partial_update endpoints (via `AsyncUpdateMixin`) return
+HTTP 202 `{"task": "..."}` when changes are detected, or HTTP 200 with the resource
+when nothing changed. The pulpcore OpenAPI schema generator incorrectly declares
+the resource type (e.g. `RpmRpmRemoteResponse`) as the return type instead of
+`AsyncOperationResponse`. The 3.85-era bindings had this right; the 3.105+ bindings
+regressed. Since `*Response` models have no `task` attribute, the task href from
+202 responses is silently dropped during deserialization — Dynflow never tracks it.
+
+**The fix:** `lib/monkeys/pulp_polymorphic_remote_response.rb` forces
+`debug_return_type: 'AsyncOperationResponse'` on all update methods. On 202 the
+task href deserializes correctly; on 200 (no-op) `task=nil`, which callers handle.
+
+**Upstream bug:** https://github.com/pulp/pulpcore/issues/7705
+Remove the monkey patch when pulpcore fixes the schema. No N-1 concerns — the
+bindings live on the Katello server, not the capsule, so fixed bindings work
+against both 3.85 (always 202) and 3.105 (202 or 200) capsules.
+
+**When bumping Pulp gems:** Every API class whose ViewSet inherits
+`AsyncUpdateMixin` must be in the patch list. Don't assume any gem already
+returns `AsyncOperationResponse` — verify with:
+```ruby
+# In .vendor/ruby/3.0.0/gems/pulp_*_client-*/lib/pulp_*_client/api/*.rb
+return_type = opts[:debug_return_type] || 'FileFileRemoteResponse'  # ❌ needs patch
+return_type = opts[:debug_return_type] || 'AsyncOperationResponse'  # ✅ correct
+```
+
+See https://projects.theforeman.org/issues/39305 for the original discovery.
+
 ## Simplified ACS refresh goes through `simplified_acs_remote_options`, not `remote_options`
 
 In `Pulp3::AlternateContentSource#remote_options`, simplified ACS immediately

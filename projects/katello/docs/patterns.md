@@ -119,6 +119,29 @@ Katello's RPM model is lean — no vendor, no packager, no description in the DB
 The `Pulp3::Rpm` service class exposes vendor via `backend_data['rpm_vendor']`
 for on-demand access. InstalledPackage (what's on a host) does store vendor.
 
+## Pulp polymorphic response monkey patch pattern
+
+`lib/monkeys/pulp_polymorphic_remote_response.rb` works around a pulpcore schema
+bug (https://github.com/pulp/pulpcore/issues/7705) where the generated bindings
+declare `*Response` as the return type for update endpoints instead of
+`AsyncOperationResponse`. The patch forces `debug_return_type: 'AsyncOperationResponse'`
+so 202 task responses deserialize correctly. Removable once pulpcore fixes the schema.
+
+The patch list must include **every** API class whose ViewSet inherits `AsyncUpdateMixin`:
+- RemoteViewSet: all `Remotes*Api` classes (RPM, ULN, Ansible×3, Container×2, OSTree, Deb, File, Python)
+- RepositoryViewSet: all `Repositories*Api` classes
+- DistributionViewSet: all `Distributions*Api` classes
+- AlternateContentSourceViewSet: all `Acs*Api` classes
+- ExporterViewSet: `ExportersFilesystemApi`, `ExportersPulpApi`
+
+Tests live at `test/lib/monkeys/pulp_polymorphic_remote_response_test.rb` — each test
+stubs an HTTP PATCH returning 202 with a task href and asserts the result is an
+`AsyncOperationResponse`. When bumping Pulp gem versions, add any new API classes to
+both the patch list and the test file.
+
+The monkey patch initializer at `config/initializers/monkeys.rb` loads all monkey patches
+at boot time.
+
 ## ACS refresh is async (`async_task`), create/update/destroy are sync (`sync_task`)
 
 Refresh returns a 202 with a task object. Create, update, and destroy block until
