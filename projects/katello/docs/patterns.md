@@ -76,6 +76,49 @@ custom validator method that might early-return before reaching the check.
 without it for custom/rhui. This affects the `backend_service` call signature and
 the Pulp remote options path taken.
 
+## Red Hat repos are immutable; custom repos are user-managed
+
+Red Hat repositories synced from the CDN are read-only — users cannot add, remove,
+or modify packages. They are identified by `Provider::REDHAT` type. Custom repos
+(synced from third-party URLs or populated via upload) allow full user control.
+
+Scopes: `Repository.redhat` and `Repository.custom` filter by provider type.
+
+## Repository product and content metadata (Candlepin)
+
+Red Hat repos carry rich metadata from the subscription manifest via Candlepin:
+
+- `content_label` — CDN repo identifier (e.g., `rhel-9-for-x86_64-baseos-rpms`)
+- `content_url` — CDN path with substitution vars (e.g., `/content/dist/rhel8/$releasever/$basearch/baseos/os`)
+- `major` / `minor` — version from manifest substitutions (e.g., `9` / `9.4`)
+- `product.name` — Candlepin product name (e.g., `Red Hat Enterprise Linux for x86_64`)
+- `product.cp_id` — Candlepin product ID
+
+The `Katello::Candlepin::RepositoryMapper` resolves substitution variables
+(`$releasever`, `$basearch`) and constructs the repository from content + product
++ substitutions.
+
+Custom repos have none of this — they are just a URL + name + content type.
+
+## Content Views combine repos, not merge them
+
+Content Views group multiple repositories into a promotable unit. Individual repos
+maintain their identity — a CV containing RHEL BaseOS + EPEL + custom RPMs still
+has three separate repos. Content View Filters can include/exclude packages, but
+the underlying repo boundaries persist. Mixing of content happens at the CV level,
+not at the repo level.
+
+## RPM metadata: what's stored where
+
+| Field | `katello_rpms` | `katello_installed_packages` | Pulp (`rpm_vendor`) |
+|-------|:-:|:-:|:-:|
+| name, version, release, arch, epoch | ✅ | ✅ | ✅ |
+| vendor | ❌ | ✅ | ✅ |
+
+Katello's RPM model is lean — no vendor, no packager, no description in the DB.
+The `Pulp3::Rpm` service class exposes vendor via `backend_data['rpm_vendor']`
+for on-demand access. InstalledPackage (what's on a host) does store vendor.
+
 ## ACS refresh is async (`async_task`), create/update/destroy are sync (`sync_task`)
 
 Refresh returns a 202 with a task object. Create, update, and destroy block until
