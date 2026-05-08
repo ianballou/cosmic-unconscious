@@ -47,7 +47,7 @@ The following commands exist today in foreman-maintain. The recommendations belo
 - **Need it?** Move — SatStats reporting should ideally move to another tool since it's unrelated to configuring Foreman. This way it could remain Ruby too.
 - **Tracked?** SAT-44804 (report command), SAT-44834 (sosreport integration)
 - **Size**: Epic
-- **⚠️ sosreport dependency**: The sos Foreman plugin calls `foreman-maintain report` to collect data for sosreports. Wherever this functionality lands, the [sos plugin](https://github.com/sosreport/sos/blob/main/sos/report/plugins/foreman_installer.py) must be updated to call the new tool. See [SAT-44834](https://redhat.atlassian.net/browse/SAT-44834) and parent epic [SAT-43762](https://redhat.atlassian.net/browse/SAT-43762).
+- **sosreport dependency**: The sos Foreman plugin calls `foreman-maintain report` to collect data for sosreports. Wherever this functionality lands, the [sos plugin](https://github.com/sosreport/sos/blob/main/sos/report/plugins/foreman_installer.py) must be updated to call the new tool. See [SAT-44834](https://redhat.atlassian.net/browse/SAT-44834) and parent epic [SAT-43762](https://redhat.atlassian.net/browse/SAT-43762).
 
 ### `packages` — RPM locking, install, update
 - **Need it?** No — very few host RPMs in containerized model. Can users just manage RPMs with dnf? Or do we still need gating with dnf filtering?
