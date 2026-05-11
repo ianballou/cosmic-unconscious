@@ -142,6 +142,39 @@ both the patch list and the test file.
 The monkey patch initializer at `config/initializers/monkeys.rb` loads all monkey patches
 at boot time.
 
+## Inspecting Dynflow execution plans for Pulp task tracking
+
+To verify that Pulp tasks are properly tracked in Dynflow (e.g. during capsule sync),
+use `execution_plan.actions` to walk all sub-actions and inspect their `output`:
+
+```ruby
+task = ForemanTasks::Task.find("TASK_UUID")
+ep = task.execution_plan
+ep.actions.each do |action|
+  pulp_tasks = action.output.dig(:pulp_tasks) || action.output.dig("pulp_tasks")
+  puts "#{action.class.name} | state=#{action.run_step&.state} | pulp_tasks=#{pulp_tasks&.length || 0}"
+end
+```
+
+Key sub-actions to check:
+- `Pulp3::Orchestration::Repository::RefreshRepos` — remote updates (1 task per changed remote)
+- `Pulp3::CapsuleContent::Sync` — repo syncs (always 1 task)
+- `Pulp3::CapsuleContent::GenerateMetadata` — publication creation (0 if `pulp3_skip_publication`)
+- `Pulp3::CapsuleContent::RefreshDistribution` — distribution updates (0 if no-op)
+
+If a Sync action has 0 `pulp_tasks` but the sync should have done work, the response
+deserialization is broken.
+
+## Verifying Pulp API calls on a smart proxy
+
+Check what HTTP mutations hit the proxy's Pulp API via journalctl:
+```bash
+ssh proxy "sudo journalctl -u pulpcore-api --since '10 min ago' --no-pager | grep -E 'PATCH|PUT|POST'"
+```
+
+Key response codes: 200 = no-op, 202 = task dispatched, 400 = field not supported
+(e.g. `repository_version` on old Python distributions → triggers retry with publication).
+
 ## ACS refresh is async (`async_task`), create/update/destroy are sync (`sync_task`)
 
 Refresh returns a 202 with a task object. Create, update, and destroy block until

@@ -98,6 +98,13 @@ return_type = opts[:debug_return_type] || 'AsyncOperationResponse'  # ✅ correc
 
 See https://projects.theforeman.org/issues/39305 for the original discovery.
 
+**Backward compatibility confirmed:** Forcing `AsyncOperationResponse` on
+file/deb/python remote updates works against pulpcore 3.73 (N-2) and 3.85 (N-1).
+Those older versions always return HTTP 202 for PATCH operations (they don't have
+`AsyncUpdateMixin`'s 200-when-no-op optimization). The `AsyncOperationResponse`
+deserializes correctly from their 202 responses. Tested May 2026 with capsule
+syncs of file (250 files), deb (3 packages), and python (158 packages) repos.
+
 ## Simplified ACS refresh goes through `simplified_acs_remote_options`, not `remote_options`
 
 In `Pulp3::AlternateContentSource#remote_options`, simplified ACS immediately
