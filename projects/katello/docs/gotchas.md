@@ -105,6 +105,43 @@ Those older versions always return HTTP 202 for PATCH operations (they don't hav
 deserializes correctly from their 202 responses. Tested May 2026 with capsule
 syncs of file (250 files), deb (3 packages), and python (158 packages) repos.
 
+## EVR SQL extension silently strips tilde (~) and caret (^)
+
+The `rpmver_array()` PL/pgSQL function (defined in migration
+`20240924161240_katello_recreate_evr_constructs.rb`) strips all non-alphanumeric
+characters before parsing version strings into `evr_array_item[]` arrays:
+
+```sql
+-- Throw out all non-alphanum characters
+while one <> '' and not isalphanum(one)
+loop
+    one := substr(one, 2);
+end loop;
+```
+
+`isalphanum()` only recognizes `[a-zA-Z0-9]`. Tilde and caret are stripped, so
+`8.0.100~rc.2` is parsed identically to `8.0.100.rc.2`. Since the parsed array
+is longer, it sorts AFTER `8.0.100` — the exact opposite of correct RPM behavior.
+
+Per the RPM spec:
+- `~` means **pre-release** — `8.0.100~rc.2` sorts BEFORE `8.0.100`
+- `^` means **post-release snapshot** — `8.0.100^git1` sorts AFTER `8.0.100` but BEFORE `8.0.101`
+
+This affects **all three EVR comparison paths** in Katello:
+1. `evr_t` column (applicability calculation, upgrade dropdown)
+2. `version_sortable` strings (`Rpm.latest()`, `PackageFilter`, scoped search)
+3. `Rpm.latest()` LEFT OUTER JOIN (uses `version_sortable` under the hood)
+
+The `sortable_version()` Ruby method (`Katello::Util::Package`) also strips tilde
+because it uses `scan(/([A-Za-z]+|\d+)/)` which drops non-alphanumeric characters.
+
+**Tracked in:** SAT-38492. See `plans/SAT_38492_EVR_TILDE_FIX.md` for the fix plan.
+
+**Upstream context:** Pulp hit the same bug (pulp_rpm#4124) and worked around it by
+moving version comparison from SQL to Python (commits `e974e04e`, `c7bbe48b` by
+Daniel Alley). They did NOT fix their SQL extension. PR #4171 attempted a full SQL
+rewrite but was abandoned.
+
 ## Simplified ACS refresh goes through `simplified_acs_remote_options`, not `remote_options`
 
 In `Pulp3::AlternateContentSource#remote_options`, simplified ACS immediately
