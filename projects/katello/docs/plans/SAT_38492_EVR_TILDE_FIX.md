@@ -153,10 +153,6 @@ This is what PR #4171 attempted. The approach is architecturally the cleanest â€
 - It requires a data migration to recompute all `evr` columns
 - It needs thorough testing (PR #4171 was never tested)
 
-**Sub-option A3: Use the Spacewalk `evr` Postgres extension**
-
-The original `evr` type in Katello came from the [Spacewalk/Uyuni `evr` extension](https://github.com/uyuni-project/uyuni/tree/master/schema/spacewalk/postgres/packages/evr_t). Katello previously used `CREATE EXTENSION evr` before migration `20240924161240` dropped it and replaced it with inline PL/pgSQL. We could investigate whether the upstream Spacewalk extension handles tilde correctly, or if there's a newer version that does.
-
 ### Option B: Work Around the SQL Extension (Pulp's Approach)
 
 Do the version comparison in Ruby instead of SQL. This is what Pulp did â€” they stopped relying on `ORDER BY evr` and instead sort in application code using a correct `RpmVersion` comparator.
