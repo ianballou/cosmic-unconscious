@@ -25,8 +25,19 @@ In foremanctl's containerized model:
 | `check_hostname` | Validates FQDN: not localhost, has dot, no underscores, lowercase |
 | `check_database_connection` | Pings Foreman/Candlepin/Pulp databases (external DB mode only) |
 | `check_system_requirements` | Validates CPU/RAM against tuning profile thresholds |
+| `check_services` | Dynamically discovers services via `systemctl list-dependencies foreman.target`, filters recurring timers, asserts all are active. Added in PR #521 |
+| `check_foreman_api` | Calls `/api/v2/ping`, checks foreman_tasks status via katello ping response. Added in PR #521 |
+| `check_foreman_tasks` | Queries DB for tasks with `state='paused' AND result='error'`. Skippable via `--skip-check-foreman-tasks`. Added in PR #521 |
+| `check_host_facts_count` | Queries DB for hosts with >= 10000 fact values (threshold configurable via `check_host_facts_count_max_per_host`). Added in PR #521 |
+| `check_duplicate_permissions` | Queries DB for permission names that appear more than once. Added in PR #521 |
 | `check_subuid_subgid` | Validates /etc/subuid and /etc/subgid entries for container user namespaces (role exists but is not used) |
 | `certificate_checks` | Validates certificate/key/CA using foreman-certificate-check script (runs during deploy, not in checks playbook). Centralize to checks playbook? |
+
+### PR #521 Notes
+- `check_foreman_tasks` only catches `paused+error` — narrower than foreman-maintain's `not_paused` which caught any paused task regardless of result
+- `check_host_facts_count` uses `>=` (ge) threshold, not `>` (gt) — a host with exactly 10000 facts will trigger the check
+- The `--fix` flag for duplicate permissions is mentioned in the PR description but not implemented (no CLI parameter in metadata, no delete task in the role)
+- Robottelo integration tests for these checks are in `tests/foreman/installer/test_foremanctl_health.py`
 
 ---
 

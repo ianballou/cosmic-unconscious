@@ -21,6 +21,30 @@
 - foremanctl already runs sosreport in CI: `development/playbooks/sos/sos.yaml`
 - Upstream foremanctl issue: https://github.com/theforeman/foremanctl/issues/49
 
+## health.yml vars file doesn't exist
+The health playbook (`src/playbooks/health/health.yaml`) references `../../vars/health.yml`
+in `vars_files`, but this file does not exist. It works because Ansible 2.15+ silently
+ignores missing `vars_files` entries — but this is undocumented/fragile behavior.
+
+## `db:` parameter is deprecated in community.postgresql
+The health check roles use `db:` in `community.postgresql.postgresql_query` tasks.
+This triggers a deprecation warning — `login_db:` is the correct parameter. The existing
+`check_database_connection` role already uses `login_db:` correctly.
+
+## httpd wasn't always in foreman.target
+The commit adding httpd to `foreman.target` via a systemd drop-in (`Fixes #535`) landed
+on 2026-06-03. Systems deployed before that date don't have the drop-in, so `systemctl
+list-dependencies foreman.target` won't include httpd. The dynamic service check
+(`check_services`) won't catch httpd being down on those older deployments — though
+`check_foreman_api` will still detect the effect (503/connection refused). Running
+`foremanctl deploy` on an older system will install the drop-in.
+
+## has_feature() checks transitive dependencies
+The `has_feature()` Ansible filter plugin checks both direct features (in
+`enabled_features`) and transitive dependencies via `features.yaml`. For example,
+`has_feature('tasks')` returns True when `katello` is enabled because `katello` depends
+on `tasks`. This is correct behavior but can be surprising when debugging.
+
 ## foreman-maintain definitions/ vs lib/
 - `definitions/` = concrete checks, procedures, scenarios (the "what")
 - `lib/foreman_maintain/` = framework classes and utilities (the "how")
