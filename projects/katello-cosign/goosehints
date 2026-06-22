@@ -1,0 +1,25 @@
+This project tracks work to give Katello better support for cosign (sigstore) artifacts in container repositories.
+
+## Context
+- Cosign is the standard tool for signing OCI container images (part of the sigstore project).
+- It stores signatures (.sig), attestations (.att), and SBOMs (.sbom) as tagged OCI manifests alongside container images in the same repository.
+- When Katello (via Pulp) syncs container repos, these artifacts are mirrored but not well understood or surfaced to users.
+- The goal is to make Katello aware of these artifacts: display them, filter them, and potentially verify them.
+
+## Key Knowledge
+- See docs/cosign-oci-artifacts.md for detailed analysis of how cosign stores artifacts in OCI registries.
+- See docs/pulp-container-cosign-support.md for what pulp-container already does and what gaps remain (no OCI 1.1 referrers API support).
+- See docs/plans/cosign-display-and-oci-referrers.md for the two-track plan and open questions.
+- The cosign source code is at ~/cosign (sigstore/cosign).
+- The pulp-container source code is at ~/pulp_container (2.28.0.dev).
+- Katello's container sync logic lives in the katello project (see sister project katello/).
+
+## Current Status
+- Pulp classifies cosign manifests by type but has no OCI 1.1 referrers API support.
+- Katello does not surface cosign artifact types to users.
+- Two tracks identified: (1) improve display of existing cosign tags now, (2) OCI 1.1 referrers later.
+- Unclear which track deserves the most focus -- depends on ecosystem adoption signals.
+
+## Related Projects
+- katello/ -- the Katello plugin itself where implementation work happens
+- foreman/ -- the host Foreman app
