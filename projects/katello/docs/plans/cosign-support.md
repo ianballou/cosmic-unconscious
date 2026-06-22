@@ -57,6 +57,12 @@ vs actual images. Katello should:
 - Show them linked to their parent image digest in the UI
 - Potentially group or filter them (e.g., "show signatures for this image")
 
+Pulp-container already classifies manifests by type (`cosign_signature`,
+`cosign_attestation`, `cosign_attestation_bundle`, `cosign_sbom`) via
+`Manifest.is_cosign()` / `get_cosign_type()`. Katello can leverage this
+without Pulp changes — it is purely Katello UI/API work on top of data
+Pulp already provides.
+
 ### 2. OCI Referrers API support (spec compliance)
 
 The OCI distribution spec defines a Referrers API (`GET /v2/{repo}/referrers/{digest}`)
@@ -64,9 +70,27 @@ that allows clients to discover artifacts (signatures, SBOMs, attestations) link
 a given manifest digest without relying on tag naming conventions. Cosign is migrating
 toward this API (it's the successor to the tag-based scheme).
 
-Katello and Pulp need to support this endpoint for forward compatibility:
-- Pulp Container tracks this at: https://github.com/pulp/pulp_container/issues/TBD
-- Katello would need to proxy this endpoint like other registry API calls
+#### What Pulp-container needs (foundation)
+
+Pulp-container has no referrers support today. It would need:
+
+1. A `subject` relationship tracked in the `Manifest` model (currently only accepted
+   during JSON schema validation but not persisted as a queryable field)
+2. A `/v2/<repo>/referrers/<digest>` view in `registry_api.py` + route in `urls.py`
+3. Referrers-aware sync that queries upstream referrers endpoints
+4. Referrers tag schema fallback for registries without native support
+
+#### Three registry layers need coordinated changes
+
+| Layer | Role | Referrers Status |
+|---|---|---|
+| **Pulp-container** (`~/pulp_container`) | Content storage + registry API | Not implemented — must go first |
+| **Katello registry proxy** (`registry_proxies_controller.rb`) | Auth frontend to Pulp | Needs new route + controller action to proxy referrers |
+| **Smart proxy container gateway** (`smart_proxy_container_gateway`) | Capsule-side registry for hosts | Needs new Sinatra route to proxy referrers |
+
+Once Pulp implements referrers, Katello and smart-proxy can proxy the requests the
+same way they proxy manifests and blobs today. Auth handling for referrers would
+follow the same `authorize_repository_read` pattern.
 
 ### 3. Signature verification (stretch goal)
 
@@ -83,6 +107,7 @@ promote signed images to lifecycle environments).
 
 ## Detailed Knowledge
 
-See the dedicated project: `projects/katello-cosign/`
-- `docs/cosign-oci-artifacts.md` -- full analysis of how cosign stores artifacts in OCI registries
+- [cosign-oci-artifacts.md](../cosign-oci-artifacts.md) — how cosign stores artifacts in OCI registries (tag naming, manifest structure, media types, annotations)
+- [pulp-container-cosign-support.md](../pulp-container-cosign-support.md) — pulp_container's current cosign/OCI 1.1 support and gaps
 - Cosign source code: ~/cosign
+- Pulp-container source code: ~/pulp_container
