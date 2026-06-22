@@ -145,6 +145,37 @@ ProxyPass /pulp/container/ unix:///run/pulpcore-content.sock|...
 - Pulp constants: `pulp_container/constants.py`
 - Pulp content handler: `pulpcore/content/handler.py` (Range support)
 
+## Cosign / sigstore compatibility
+
+Katello's registry fully supports cosign workflows (sign, verify, attest,
+verify-attestation, attach sbom) on container push repos. All cosign operations
+are standard OCI distribution spec calls — no special registry support needed.
+
+Cosign artifacts are stored as ordinary OCI manifests under tag conventions:
+- `sha256-<digest>.sig` — signatures
+- `sha256-<digest>.att` — attestations (DSSE-wrapped SBOMs/provenance)
+- `sha256-<digest>.sbom` — raw SBOMs (deprecated)
+
+### Historical charset=utf-8 bug
+
+pulp_container < 2.25.1 had a bug where `aiohttp.web.Response(text=...)` appended
+`; charset=utf-8` to Content-Type headers on manifest responses. Cosign's strict
+media type parser rejected this. Fixed in pulp_container 2.25.1/2.26.0 via
+[PR #2002](https://github.com/pulp/pulp_container/pull/2002) (changed `text=` to
+`body=`).
+
+### Known gaps
+
+- **Synced repos**: cosign cannot push signatures to synced (pull-type) repos.
+  Only container push repos support the write operations cosign needs.
+- **Tag visibility**: `.sig`/`.att`/`.sbom` tags appear as regular tags in the
+  Katello UI with no special labeling or linkage to parent images.
+- **Referrers API**: The OCI Referrers API (`GET /v2/{repo}/referrers/{digest}`)
+  is not yet supported. Cosign is migrating from tag-based to referrers-based
+  artifact discovery. Katello and Pulp will need to support this endpoint.
+
+See [plans/cosign-support.md](plans/cosign-support.md) for the full plan.
+
 ## Related docs
 
 - [bootc Container Updates](bootc-container-updates.md) — bootc pull architecture,
