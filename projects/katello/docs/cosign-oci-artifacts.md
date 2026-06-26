@@ -113,6 +113,23 @@ endpoint. Pulp would need to understand this API to sync them.
 | Attestation | `.att` | DSSE-wrapped in-toto statements (SBOM, provenance, vuln) | `application/vnd.dsse.envelope.v1+json` |
 | SBOM | `.sbom` | SBOM data (CycloneDX, SPDX, Syft) | varies by format |
 
+## Difference from GPG Atomic Signatures
+
+Cosign signatures are entirely separate from the GPG-based "atomic container signature"
+system used by Red Hat's external sigstore. Key differences:
+
+| Aspect | Cosign | GPG Atomic (sigstore) |
+|---|---|---|
+| Storage | In-registry as OCI manifests | External HTTP server |
+| Crypto | ECDSA P-256 | RSA (v4) or ML-DSA-87 PQC (v6) |
+| Pulp model | `Manifest` with type classification | `ManifestSignature` (dedicated model) |
+| Parsed by `extract_data_from_signature()`? | **No** | **Yes** |
+| Affected by PQC bug? | **No** | **Yes** |
+| Needs Katello integration? | **No** (syncs as regular tags) | **Yes** (sigstore + extensions API) |
+
+See [container-gpg-signatures-sigstore.md](container-gpg-signatures-sigstore.md) for the
+full GPG sigstore analysis.
+
 ## Implications for Katello/Pulp
 
 1. **These are not container images** -- they are OCI manifests used for supply chain security metadata.

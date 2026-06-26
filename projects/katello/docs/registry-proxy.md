@@ -176,7 +176,22 @@ media type parser rejected this. Fixed in pulp_container 2.25.1/2.26.0 via
 
 See [plans/cosign-support.md](plans/cosign-support.md) for the full plan.
 
+## GPG Signature Extensions API Gap
+
+Katello's registry proxy does **not** expose Pulp's GPG signature extensions API:
+
+- **Missing route:** `/extensions/v2/{path}/signatures/{digest}` is not in `registry.rb`
+- **Missing header:** `X-Registry-Supports-Signatures: 1` is served by Pulp but not
+  forwarded through Katello's proxy to clients
+- **Impact:** Clients (podman, skopeo) cannot discover or retrieve GPG atomic signatures
+  through Katello's registry, even if Pulp has them stored as `ManifestSignature` objects
+
+This is required for the sigstore signature verification feature.
+See [container-gpg-signatures-sigstore.md](container-gpg-signatures-sigstore.md) for full details.
+
 ## Related docs
 
 - [bootc Container Updates](bootc-container-updates.md) — bootc pull architecture,
   delta mechanisms, zstd:chunked/enable_partial_images details
+- [Container GPG Signatures & Sigstore](container-gpg-signatures-sigstore.md) — GPG sigstore
+  mechanism, PQC support, extensions API, and Katello integration gaps
