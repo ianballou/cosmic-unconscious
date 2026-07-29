@@ -35,6 +35,52 @@
 - All use metadata DSL: `metadata { label :foo; tags :bar; for_feature :baz; ... }`
 - Many of these abstractions exist because Ruby needed them — Ansible roles/playbooks/facts replace most of them naturally
 
+## Ansible variable layering: role defaults as public interface
+
+Role defaults (`defaults/main.yaml`) are the user-facing public interface for a role.
+Internal deployment wiring lives in `vars_files` loaded at the play level (e.g. `src/vars/database.yml`).
+
+The pattern for bridging these layers:
+
+1. Define role-namespaced variables in `defaults/main.yaml` that reference the internal layer:
+   ```yaml
+   # src/roles/foreman_proxy/defaults/main.yaml
+   foreman_proxy_container_gateway_db_host: "{{ container_gateway_database_host }}"
+   foreman_proxy_container_gateway_db_port: "{{ container_gateway_database_port }}"
+   ```
+
+2. Compose higher-level values from the role's own variables:
+   ```yaml
+   foreman_proxy_container_gateway_db_connection_string: >-
+     postgresql://{{ foreman_proxy_container_gateway_db_user }}:...
+   ```
+
+3. Templates reference only role-namespaced variables.
+
+Why this works with Ansible precedence:
+- User overrides in inventory beat role defaults, so the Jinja reference is never evaluated.
+- If no override, the role default resolves the internal variable from `vars_files` at runtime.
+- `vars_files` (play level) is higher precedence than inventory, so internal variables can't
+  be casually overridden -- but that's fine because users interact through the role defaults.
+
+Existing examples:
+- `foreman_proxy_container_gateway_db_*` variables wrapping `container_gateway_database_*` from `database.yml`
+- All services (foreman, candlepin, pulp, container_gateway) follow this layered pattern for database config
+
+## Shared CLI parameter includes (`_database_connection`, `_database_mode`)
+
+Per-service database CLI parameters (name, user, password) live in
+`src/playbooks/_database_connection/metadata.obsah.yaml`. This is an included metadata
+file, not a standalone command. Playbooks include it via their `include:` list (directly
+or through flavor includes like `_flavors/katello`).
+
+When adding database config for a new service, add its variables here alongside the
+existing foreman/candlepin/pulp entries to maintain consistency.
+
+Note: `deploy --help` currently does not show database options due to a pre-existing
+issue with obsah nested include resolution. The options do work correctly via `checks --help`
+and when passed directly.
+
 ## Design approach for porting
 - Start from "what does the user need to do?" not "what does foreman-maintain have?"
 - A foreman-maintain Scenario ≈ an Ansible playbook composing roles

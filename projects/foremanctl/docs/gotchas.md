@@ -45,6 +45,15 @@ The `has_feature()` Ansible filter plugin checks both direct features (in
 `has_feature('tasks')` returns True when `katello` is enabled because `katello` depends
 on `tasks`. This is correct behavior but can be surprising when debugging.
 
+## Container gateway DB connection doesn't support SSL (yet)
+The smart_proxy_container_gateway plugin passes its `db_connection_string` setting directly
+to `Sequel.connect`. Unlike foreman/candlepin/pulp, which have separate application-level
+SSL config, container gateway would need SSL parameters embedded in the connection string
+as PostgreSQL query parameters (e.g. `?sslmode=verify-full&sslrootcert=/path/to/ca.pem`).
+The `database.yml` layer is missing `container_gateway_database_ssl_mode` and
+`container_gateway_database_ssl_ca` variables, and the connection string template in the
+foreman_proxy role defaults would need to conditionally append them.
+
 ## foreman-maintain definitions/ vs lib/
 - `definitions/` = concrete checks, procedures, scenarios (the "what")
 - `lib/foreman_maintain/` = framework classes and utilities (the "how")
