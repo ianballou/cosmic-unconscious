@@ -142,6 +142,15 @@ moving version comparison from SQL to Python (commits `e974e04e`, `c7bbe48b` by
 Daniel Alley). They did NOT fix their SQL extension. PR #4171 attempted a full SQL
 rewrite but was abandoned.
 
+## ML-DSA-65 (PQC) certificates are incompatible with TLS 1.2
+
+All TLS 1.2 cipher suites require RSA or ECDSA key exchange/signing. ML-DSA-65
+certificates cannot participate in TLS 1.2 handshakes at all -- the handshake
+fails regardless of cipher configuration. On PQC-only machines, only TLS 1.3
+works (TLS 1.3 uses signature algorithms negotiated separately from cipher suites).
+This means TLS 1.2-specific code paths (e.g. `SSL_CTX_set_cipher_list` with
+`PROFILE=SYSTEM`) cannot be verified end-to-end on PQC test machines.
+
 ## Simplified ACS refresh goes through `simplified_acs_remote_options`, not `remote_options`
 
 In `Pulp3::AlternateContentSource#remote_options`, simplified ACS immediately
